@@ -22,9 +22,6 @@ mk "status:bloqueado"   "b60205" "Espera decisión o credencial humana"
 
 # Prioridad y tamaño
 mk "needs-human" "e99695" "Requiere acción humana (dinero, cuentas, legal)"
-
-# Diseño
-mk "ux:shape" "c7def8" "Cambio UX considerable: brief del designer antes del plan"
 mk "priority:p0" "d93f0b" "Urgente: bloquea el loop del producto"
 mk "priority:p1" "f9d0c4" "Esta semana"
 mk "priority:p2" "fef2c0" "Cuando quepa"
@@ -32,5 +29,8 @@ mk "size:xs"     "c2e0c6" "Menos de 1h"
 mk "size:s"      "c2e0c6" "Menos de 4h"
 mk "size:m"      "bfd4f2" "Menos de 2 días; plan del architect si es feature"
 mk "size:l"      "bfd4f2" "Más de 2 días; partir o chained-pr"
+
+# Diseño
+mk "ux:shape" "c7def8" "Cambio UX considerable: brief del designer antes del plan"
 
 echo "Labels listos."
