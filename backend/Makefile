@@ -13,7 +13,7 @@ GOFUMPT_VERSION := v0.12.0
 GOLANGCI_LINT := $(BIN)/golangci-lint
 GOFUMPT := $(BIN)/gofumpt
 
-.PHONY: lint fmt test run
+.PHONY: lint fmt test run worker
 
 lint: $(GOLANGCI_LINT) ## golangci-lint run (versión pinneada arriba)
 	$(GOLANGCI_LINT) run
@@ -28,6 +28,10 @@ run: ## docker compose up -d postgres redis && go run ./cmd/api
 	docker compose up -d postgres redis
 	set -a; [ -f .env ] && . ./.env; set +a; \
 	$(GO) run ./cmd/api
+
+worker: ## go run ./cmd/worker
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	$(GO) run ./cmd/worker
 
 $(GOLANGCI_LINT):
 	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
