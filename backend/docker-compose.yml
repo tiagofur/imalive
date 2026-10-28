@@ -1,7 +1,7 @@
 # Entorno local del backend (docs/arquitectura/overview.md §Entornos):
-# solo Postgres y Redis como contenedores; la api y el worker corren en el
-# host con `make run` / `make worker`. Sin secretos: credenciales locales de
-# juguete, nunca las de entornos reales (esas viven en un gestor de secretos).
+# solo Postgres y Redis como contenedores; la api corre en el host con
+# `make run`. Sin secretos: credenciales locales de juguete, nunca las de
+# entornos reales (esas viven en un gestor de secretos).
 services:
   postgres:
     image: postgres:16
