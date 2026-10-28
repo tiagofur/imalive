@@ -14,14 +14,19 @@ func RequestLogging(log *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			// Emitted in a defer: one record per request means also when a
+			// panic unwinds from downstream (JD-1). With recovery running
+			// inside, rec.status is the true status the client received.
+			defer func() {
+				log.Info("request",
+					slog.String("method", r.Method),
+					slog.String("path", r.URL.Path),
+					slog.Int("status", rec.status),
+					slog.Duration("duration", time.Since(start)),
+					slog.String("request_id", RequestIDFromContext(r.Context())),
+				)
+			}()
 			next.ServeHTTP(rec, r)
-			log.Info("request",
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.Int("status", rec.status),
-				slog.Duration("duration", time.Since(start)),
-				slog.String("request_id", RequestIDFromContext(r.Context())),
-			)
 		})
 	}
 }

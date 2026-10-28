@@ -1,7 +1,7 @@
-// Package httpmw provides the base middleware chain of the API: recovery,
-// request-id and request logging (docs/stack/backend-go.md). Logs carry
-// method, path, status, duration and request_id — never headers, query
-// strings or bodies (privacy by default).
+// Package httpmw provides the base middleware chain of the API: request-id,
+// request logging and recovery, outermost first (docs/stack/backend-go.md).
+// Logs carry method, path, status, duration and request_id — never headers,
+// query strings or bodies (privacy by default).
 package httpmw
 
 import (
