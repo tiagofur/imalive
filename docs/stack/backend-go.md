@@ -42,7 +42,7 @@
 ## HTTP (API)
 
 - Router: `net/http` con patrones `GET /v1/checkins/{id}` (o chi si el middleware lo pide).
-- Cadena de middleware: recovery → request-id → logging → telemetry → rate limit → auth (según ruta).
+- Cadena de middleware: request-id → logging → recovery → telemetry → rate limit → auth (según ruta). Recovery va por **dentro** del request-logger: así el registro `request` lleva el 500 real de un pánico y ambos registros (`request` y `panic recovered`) llevan `request_id`.
 - Handlers finos: parsean/validan entrada, llaman al dominio, mapean respuesta/errores (RFC 9457). Cero lógica de negocio en handlers.
 - Contrato: los handlers se validan contra `/contracts/openapi.yaml` en CI (ADR-0003).
 - Webhooks (Twilio, RevenueCat): verificación de **firma obligatoria** antes de parsear; idempotencia por id externo.

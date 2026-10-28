@@ -41,10 +41,11 @@ directivas `tool` de go.mod para no inflar el diff con ~1.200 líneas de
 
 Hoy solo existe `GET /healthz` — liveness del proceso con su versión, endpoint
 operacional fuera de `/v1` (no toca el contrato OpenAPI, ADR-0003). La cadena
-de middleware por petición: `recovery → request-id`
-([`internal/platform/httpmw`](internal/platform/httpmw/)); el request-id va en
-el header de respuesta `X-Request-ID`. El request-log por petición y readiness
-con ping a Postgres/Redis llegan en las siguientes PRs de la cadena.
+de middleware por petición: `request-id → recovery`
+([`internal/platform/httpmw`](internal/platform/httpmw/)): el request-id va en
+el header de respuesta `X-Request-ID` y corre fuera del recovery para que el
+log de pánico lo lleve. El request-log por petición y readiness con ping a
+Postgres/Redis llegan en las siguientes PRs de la cadena.
 
 ## Layout
 

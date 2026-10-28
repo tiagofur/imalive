@@ -78,3 +78,46 @@ func TestRecoveryAbsorbsRepeatedPanics(t *testing.T) {
 		t.Fatalf("logged %d panics, want 3", got)
 	}
 }
+
+// The chain runs request-id outside recovery (docs/stack/backend-go.md): the
+// panic record must carry the same id the client sees in X-Request-ID.
+func TestChainPanicRecordCarriesRequestID(t *testing.T) {
+	var buf bytes.Buffer
+	handler := RequestID(Recovery(testLogger(&buf))(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	})))
+
+	rec := serve(handler, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+	wantID := rec.Header().Get("X-Request-ID")
+	if wantID == "" {
+		t.Fatal("X-Request-ID header is empty, want the generated id")
+	}
+	records := decodeLogLines(t, &buf)
+	if len(records) != 1 || records[0]["msg"] != "panic recovered" {
+		t.Fatalf("records = %v, want one %q record", records, "panic recovered")
+	}
+	if records[0]["request_id"] != wantID {
+		t.Errorf("request_id = %v, want %q", records[0]["request_id"], wantID)
+	}
+}
+
+// Chain control: a request that never panics logs no recovery record.
+func TestChainHealthyHandlerLogsNoRecoveryRecord(t *testing.T) {
+	var buf bytes.Buffer
+	handler := RequestID(Recovery(testLogger(&buf))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusTeapot)
+	})))
+
+	rec := serve(handler, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil))
+
+	if rec.Code != http.StatusTeapot {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusTeapot)
+	}
+	if records := decodeLogLines(t, &buf); len(records) != 0 {
+		t.Fatalf("healthy handler logged %v, want no records", records)
+	}
+}

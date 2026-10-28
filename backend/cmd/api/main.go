@@ -1,5 +1,5 @@
 // Command api runs the imalive HTTP API: liveness at /healthz behind the
-// base middleware chain (recovery, request-id). Product endpoints arrive
+// base middleware chain (request-id, recovery). Product endpoints arrive
 // with the OpenAPI contract (issue #2).
 package main
 
@@ -51,8 +51,9 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthz.New(cfg.Version))
 	// Chain order per docs/stack/backend-go.md, outermost first:
-	// recovery -> request-id (request logging lands in the next PR of the chain).
-	handler := httpmw.Recovery(log)(httpmw.RequestID(mux))
+	// request-id -> recovery (request logging slots between them in the next
+	// PR of the chain). Request-id runs outside so panic logs carry it.
+	handler := httpmw.RequestID(httpmw.Recovery(log)(mux))
 
 	log.Info("api listening",
 		slog.String("addr", ln.Addr().String()),
