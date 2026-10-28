@@ -24,8 +24,128 @@ tags:
     description: Trusted circle (1-5 contacts depending on plan).
   - name: profile
     description: Authenticated user profile and check-in preferences.
-# Paths land in P2 (auth, profile) and P3 (contacts, checkins) of issue #2.
-paths: {}
+# Paths for week 1 (issue #2): auth + profile in P2, contacts + checkins in P3.
+paths:
+  /auth/otp/request:
+    post:
+      operationId: requestOtp
+      description: >
+        Sends a one-time code to the phone via WhatsApp/SMS (Twilio Verify).
+        Always returns 204 (even for unknown phones) to avoid account
+        enumeration. Rate limited per phone/IP: 429 with Retry-After.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+            example:
+              phone: '+5215512345678'
+      responses:
+        '204':
+          description: Code sent (or already recently sent).
+        '400':
+          description: Invalid phone format.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/phone-invalid
+                title: Invalid phone number
+                status: 400
+                detail: Phone must be E.164, e.g. +5215512345678.
+                code: PHONE_INVALID
+                instance: /v1/auth/otp/request
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/otp/verify:
+    post:
+      operationId: verifyOtp
+      description: >
+        Verifies the OTP code and issues the session token pair. No PII in
+        the response: the client reads the profile with GET /me.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerify'
+            example:
+              phone: '+5215512345678'
+              code: '482913'
+      responses:
+        '200':
+          description: Code verified; session issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
+                refreshToken: 7f3a9c2e5b1d4a6f8e0c3b5d7a9e1f2a4
+                expiresInSeconds: 900
+        '400':
+          description: Wrong or expired code.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                invalid:
+                  summary: Wrong code.
+                  value:
+                    type: https://api.tranqui.app/problems/otp-invalid
+                    title: Invalid code
+                    status: 400
+                    detail: The code does not match or has too many attempts.
+                    code: OTP_INVALID
+                    instance: /v1/auth/otp/verify
+                expired:
+                  summary: Code expired.
+                  value:
+                    type: https://api.tranqui.app/problems/otp-expired
+                    title: Code expired
+                    status: 400
+                    detail: The code expired; request a new one.
+                    code: OTP_EXPIRED
+                    instance: /v1/auth/otp/verify
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      description: >
+        Rotates the session token pair using a valid refresh token.
+        Completes the 15-minute JWT session: without it the session would
+        die after 15 minutes.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refreshToken: 7f3a9c2e5b1d4a6f8e0c3b5d7a9e1f2a4
+      responses:
+        '200':
+          description: Session rotated; new token pair issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tokens'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
+                refreshToken: 9e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0
+                expiresInSeconds: 900
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     bearerAuth:
@@ -69,6 +189,56 @@ components:
           format: uri-reference
           description: URI of this specific occurrence.
           example: /v1/contacts
+    PhoneNumber:
+      description: Phone in E.164 format (e.g. +5215512345678).
+      type: string
+      pattern: '^\+[1-9]\d{7,14}$'
+      example: '+5215512345678'
+    OtpRequest:
+      description: Request an OTP code for the phone.
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+    OtpVerify:
+      description: Verify the OTP code received by WhatsApp/SMS.
+      type: object
+      required: [phone, code]
+      properties:
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+        code:
+          type: string
+          description: 6-digit code from Twilio Verify.
+          pattern: '^\d{6}$'
+          example: '482913'
+    Tokens:
+      description: 'Session token pair. No PII: profile comes from GET /me.'
+      type: object
+      required: [accessToken, refreshToken, expiresInSeconds]
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT (15 min) for the Authorization header.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
+        refreshToken:
+          type: string
+          description: Opaque token to rotate the session.
+          example: 7f3a9c2e5b1d4a6f8e0c3b5d7a9e1f2a4
+        expiresInSeconds:
+          type: integer
+          description: Access token lifetime in seconds (900 = 15 min).
+          example: 900
+    RefreshRequest:
+      description: Rotate the session with a valid refresh token.
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          description: Valid refresh token from a previous issue/rotation.
+          example: 7f3a9c2e5b1d4a6f8e0c3b5d7a9e1f2a4
   responses:
     Unauthorized:
       description: Missing, expired or invalid credentials.
