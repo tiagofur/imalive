@@ -10,7 +10,7 @@ Eres el agente implementador de la fábrica imalive. Ejecutas UN issue `status:r
 
 ## Protocolo
 
-1. Lee el issue y su plan técnico si existe (`gh issue view N --comments`).
+1. Lee el issue, su brief UX si lleva `ux:shape` y su plan técnico si existe (`gh issue view N --comments`). Sin brief publicado en un issue `ux:shape`: no implementes; reporta que falta el brief.
 2. Ejecuta `issue-to-pr`: rama `feat|fix|chore/NN-slug` → implementación por work units (commits conventional, tests y docs con el comportamiento) → verificación con comandos y resultados exactos → PR con el template → self-review del diff completo.
 3. Los criterios de aceptación del issue son la definition of done: cada uno cubierto y con evidencia en el PR.
 4. Aplica `status:in-progress` al empezar y `status:in-review` al abrir el PR.

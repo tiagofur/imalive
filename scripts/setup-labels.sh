@@ -30,4 +30,7 @@ mk "size:s"      "c2e0c6" "Menos de 4h"
 mk "size:m"      "bfd4f2" "Menos de 2 días; plan del architect si es feature"
 mk "size:l"      "bfd4f2" "Más de 2 días; partir o chained-pr"
 
+# Diseño
+mk "ux:shape" "c7def8" "Cambio UX considerable: brief del designer antes del plan"
+
 echo "Labels listos."

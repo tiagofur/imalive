@@ -28,6 +28,7 @@ Load this skill when starting work on a factory issue (implementación de un iss
 | El issue no pasa DoR (sin criterios, sin size) | Ejecuta la skill `triage` sobre él antes de empezar |
 | El issue depende de un humano (credenciales, dinero, producto ambiguo) | Comenta qué falta + recomendación, aplica `status:bloqueado`, termina con el reporte del bloqueo |
 | Existe plan del architect en los comentarios | Síguelo; desviaciones justificadas en el PR |
+| El plan trae estrategia de entrega ODD | Respeta `delivery_strategy`/`chain_strategy` antes del primer commit (regla de `chained-pr`) |
 | Diff proyectado > 400 líneas | Slicing con `chained-pr` (stacked o chain con tracker) |
 | Verificación por stack | backend: `make test && make lint` · android: `./gradlew :app:lint testDebugUnitTest` · iOS: `xcodebuild test -scheme Tranqui ...` · contracts: lint de OpenAPI. Usa el primero que exista para el código que tocas |
 | Aparece trabajo fuera del alcance | Issue nuevo; nota en el PR "follow-up: #M" |
@@ -35,14 +36,14 @@ Load this skill when starting work on a factory issue (implementación de un iss
 
 ## Execution Steps
 
-1. **Leer**: `gh issue view NN --comments` (incluye plan técnico si lo hay). Confirmar DoR y que el issue está en la fase activa del roadmap.
+1. **Leer**: `gh issue view NN --comments` (incluye brief UX si lleva `ux:shape` y plan técnico si lo hay). Confirmar DoR y que el issue está en la fase activa del roadmap. Sin brief publicado en un issue `ux:shape`: no implementar; reportar que falta el brief.
 2. **Etiquetas**: `status:in-progress` al issue.
 3. **Rama**: `git switch main && git pull --ff-only && git switch -c feat/NN-slug`.
 4. **Plan corto**: 5 líneas máximo (qué, dónde, en qué orden de work units).
 5. **Implementar por work units**: cada unidad = commit conventional con su test y su doc. Ejecutar el test enfocado de la unidad antes de cada commit.
 6. **Verificar**: suite completa + lint del stack tocado. Registrar comandos y resultados exactos.
 7. **Self-review**: leer `git diff main...HEAD` entero; corregir lo que tú mismo señalarías.
-8. **PR**: push y abrir con `gh pr create` siguiendo el template de `.github/PULL_REQUEST_TEMPLATE.md` (qué/por qué, cómo probarlo, work units, verificación con resultados, decisiones sin preguntar, criterios con evidencia, rollback, checklist). Título con prefijo de capa: `[backend]` / `[android]` / `[ios]` / `[contracts]` / `[docs]` / `[fábrica]`.
+8. **PR**: push y abrir con `gh pr create` siguiendo el template de `.github/PULL_REQUEST_TEMPLATE.md` (qué/por qué, cómo probarlo, work units, verificación con resultados, decisiones sin preguntar, criterios con evidencia, rollback, checklist). Título con prefijo de capa: `[backend]` / `[android]` / `[ios]` / `[contracts]` / `[docs]` / `[fábrica]`. Si el issue lleva `ux:shape`: adjuntar la evidencia visual (capturas de emulador/simulador, §Evidencia visual del template) y enlazar el brief UX honrado; el reviewer verifica fidelidad build-vs-brief.
 9. **Etiqueta final**: `status:in-review`. CI en verde (arreglar si no).
 
 ## Output Contract
