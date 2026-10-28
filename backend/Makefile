@@ -30,6 +30,7 @@ run: ## docker compose up -d postgres redis && go run ./cmd/api
 	$(GO) run ./cmd/api
 
 worker: ## go run ./cmd/worker
+	set -a; [ -f .env ] && . ./.env; set +a; \
 	$(GO) run ./cmd/worker
 
 $(GOLANGCI_LINT):
