@@ -1,0 +1,9 @@
+name: Probe
+on:
+  pull_request:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "runner alive"
