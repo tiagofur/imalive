@@ -16,6 +16,7 @@ Load this skill when processing issues with `status:nuevo`, when preparing the b
 - "Verificable" = se puede comprobar con un comando, una acción de usuario concreta o un estado observable. Rechaza criterios vagos ("funciona bien", "sea usable").
 - Deduplica: antes de preparar, busca issues abiertos con el mismo objetivo y propón el cierre del duplicado.
 - Respeta la fase activa del roadmap ([docs/producto/roadmap.md](../../../docs/producto/roadmap.md)): lo de fases futuras no se marca `status:ready`.
+- Evalúa todo issue que toque UI/UX con el checklist de "UX considerable"; si cumple ≥1 condición, aplica `ux:shape` y el issue espera el brief del `designer` antes del plan del architect.
 - El triage no escribe código ni modifica ramas.
 
 ## Decision Gates
@@ -29,18 +30,30 @@ Load this skill when processing issues with `status:nuevo`, when preparing the b
 | Bug reportado sin pasos | Comentar pidiendo los pasos mínimos; `status:bloqueado` |
 | Issue de una fase futura del roadmap | Queda `status:nuevo` con comentario de por qué espera |
 
+## Checklist UX considerable → `ux:shape`
+
+Aplica `ux:shape` si el issue cumple **cualquiera** de estas condiciones:
+
+1. Nueva pantalla o flujo completo.
+2. Toca el sistema visual compartido (tokens, componentes, navegación global).
+3. Introduce o cambia un patrón de interacción (gestos, transiciones, estados).
+4. Es superficie de confianza o conversión: onboarding, paywall, SOS, alertas, invitar contactos.
+5. Un usuario habitual notaría el cambio sin que se lo señalaran.
+
+Queda fuera (sin `ux:shape`): cambios de copy, bugs visuales acotados sin cambio de jerarquía, pantallas compuestas solo de componentes existentes sobre un brief vigente.
+
 ## Execution Steps
 
 1. `gh issue list --label status:nuevo --state open`.
 2. Por issue: leerlo completo, buscar duplicados, clasificar `type:`.
 3. Editar el cuerpo: problema/valor, alcance, no-objetivos, criterios de aceptación numerados y verificables.
-4. Asignar `priority:` (p0 bloquea el loop del producto · p1 esta semana · p2 cuando quepa) y `size:` (xs <1h · s <4h · m <2d · l >2d).
+4. Asignar `priority:` (p0 bloquea el loop del producto · p1 esta semana · p2 cuando quepa) y `size:` (xs <1h · s <4h · m <2d · l >2d); aplicar `ux:shape` según el checklist.
 5. Aplicar el estado según decision gates (quitar `status:nuevo` cuando corresponda).
 6. Resumen final: listos, bloqueados (con qué falta exactamente), duplicados cerrados.
 
 ## Output Contract
 
-Return: por cada issue procesado — decisión (ready/bloqueado/cerrado/en espera), criterios de aceptación escritos, type/priority/size asignados, y la lista de bloqueos humanos pendientes.
+Return: por cada issue procesado — decisión (ready/bloqueado/cerrado/en espera), criterios de aceptación escritos, type/priority/size asignados, `ux:shape` (sí/no con la condición que aplica), y la lista de bloqueos humanos pendientes.
 
 ## References
 
