@@ -16,7 +16,7 @@ Load this skill when reviewing a factory PR, when asked for a second review, or 
 - Privacidad primero (`producto.md` §H, ADR-0004): persistencia de ubicación o historial de ubicaciones, ampliación de datos personales, incidentes no append-only, o claims de "emergencia médica" son P0 aunque funcionen.
 - Presupuesto de revisión ≤ 400 changed lines; un PR mayor se revisa igual y se recomienda chain o `size:exception`.
 - Sin P0/P1 abiertos no se piden cambios: `APPROVE` con P2/P3 anotados.
-- La revisión dual adversarial (skill `judgment-day`) solo la invoca el usuario explícitamente; reemplaza este protocolo para ese target.
+- La revisión dual adversarial (skill `judgment-day`) la invoca el usuario explícitamente **o** la dispara la sección "Revisión dual automática" de esta skill; en ambos casos reemplaza este protocolo para ese target.
 
 ## Decision Gates
 
@@ -40,6 +40,17 @@ Load this skill when reviewing a factory PR, when asked for a second review, or 
    - [ ] `Closes #N` correcto; CI en verde; no rompe `main`
 4. Comentar el verdict en el PR: tabla de hallazgos (severidad, archivo:línea, qué, fix concreto) + estado de los criterios de aceptación.
 5. Si `REQUEST_CHANGES`: el PR vuelve a implementación (quien implementó corrige y re-pide revisión).
+
+## Revisión dual automática
+
+Antes de revisar en simple, comprueba estos triggers. Si se cumple **cualquiera**, no revises en simple: ejecuta `judgment-day` sobre el PR y su veredicto reemplaza este protocolo:
+
+1. El diff toca motor de escalada, auth/OTP, pagos/entitlements, notificaciones a contactos o datos personales.
+2. El PR es un chain (o parte de uno) o recomienda `size:exception`.
+3. Este PR ya recibió dos `REQUEST_CHANGES` (desacuerdo repetido implementador↔revisor → jueces ciegos en vez de un tercer round simple).
+4. El usuario la pidió explícitamente para este target.
+
+Si `judgment-day` termina `ESCALATED`, el PR queda bloqueado para el humano: nada de merges autónomos, nada de tercer intento en simple.
 
 ## Output Contract
 
