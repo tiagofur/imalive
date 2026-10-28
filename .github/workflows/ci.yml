@@ -6,12 +6,30 @@ on:
   pull_request:
 
 # Cada job se activa solo cuando existe el código de su stack (monorepo en F0).
+# La detección vive en un job aparte porque hashFiles() no está permitido en el
+# `if` de nivel de job: se calcula con shell y se expone como outputs.
 # Los comandos definitivos viven en cada Makefile/proyecto (ver AGENTS.md).
 jobs:
+  detect:
+    name: Detect stacks
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.stacks.outputs.backend }}
+      android: ${{ steps.stacks.outputs.android }}
+      ios: ${{ steps.stacks.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: stacks
+        run: |
+          test -f backend/go.mod && echo "backend=true" >> "$GITHUB_OUTPUT" || echo "backend=false" >> "$GITHUB_OUTPUT"
+          test -f apps/android/settings.gradle.kts && echo "android=true" >> "$GITHUB_OUTPUT" || echo "android=false" >> "$GITHUB_OUTPUT"
+          ls apps/ios/*.xcodeproj/project.pbxproj >/dev/null 2>&1 && echo "ios=true" >> "$GITHUB_OUTPUT" || echo "ios=false" >> "$GITHUB_OUTPUT"
+
   backend:
     name: Backend (Go)
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('backend/go.mod') != '' }}
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
     defaults:
       run:
         working-directory: backend
@@ -26,7 +44,8 @@ jobs:
   android:
     name: Android
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('apps/android/settings.gradle.kts') != '' }}
+    needs: detect
+    if: needs.detect.outputs.android == 'true'
     defaults:
       run:
         working-directory: apps/android
@@ -41,7 +60,8 @@ jobs:
   ios:
     name: iOS
     runs-on: macos-15
-    if: ${{ hashFiles('apps/ios/*.xcodeproj/project.pbxproj') != '' }}
+    needs: detect
+    if: needs.detect.outputs.ios == 'true'
     steps:
       - uses: actions/checkout@v4
       # TODO(scaffolding iOS): ajustar scheme/destination definitivos
