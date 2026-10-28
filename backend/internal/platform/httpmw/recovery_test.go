@@ -1,0 +1,80 @@
+package httpmw
+
+import (
+	"bytes"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestRecovery(t *testing.T) {
+	tests := []struct {
+		name       string
+		handler    http.Handler
+		wantStatus int
+		wantPanic  bool
+	}{
+		{
+			name: "panicking handler becomes a 500 with the panic logged",
+			handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+				panic("boom")
+			}),
+			wantStatus: http.StatusInternalServerError,
+			wantPanic:  true,
+		},
+		{
+			name: "healthy handler passes through untouched",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusTeapot)
+			}),
+			wantStatus: http.StatusTeapot,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil)
+
+			rec := serve(Recovery(testLogger(&buf))(tt.handler), req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.wantStatus)
+			}
+			records := decodeLogLines(t, &buf)
+			if !tt.wantPanic {
+				if len(records) != 0 {
+					t.Fatalf("healthy handler logged %d records, want 0", len(records))
+				}
+				return
+			}
+			if len(records) != 1 || records[0]["msg"] != "panic recovered" {
+				t.Fatalf("records = %v, want one %q record", records, "panic recovered")
+			}
+			if records[0]["panic"] != "boom" {
+				t.Errorf("panic field = %v, want %q", records[0]["panic"], "boom")
+			}
+			if records[0]["stack"] == "" {
+				t.Error("stack field is empty, want the panic stack")
+			}
+		})
+	}
+}
+
+// Recovery must keep the process alive: panics are absorbed, never re-raised.
+func TestRecoveryAbsorbsRepeatedPanics(t *testing.T) {
+	var buf bytes.Buffer
+	handler := Recovery(testLogger(&buf))(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("always")
+	}))
+
+	for range 3 {
+		if rec := serve(handler, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil)); rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500", rec.Code)
+		}
+	}
+	if got := len(decodeLogLines(t, &buf)); got != 3 {
+		t.Fatalf("logged %d panics, want 3", got)
+	}
+}
