@@ -28,6 +28,7 @@ Load this skill when starting work on a factory issue (implementación de un iss
 | El issue no pasa DoR (sin criterios, sin size) | Ejecuta la skill `triage` sobre él antes de empezar |
 | El issue depende de un humano (credenciales, dinero, producto ambiguo) | Comenta qué falta + recomendación, aplica `status:bloqueado`, termina con el reporte del bloqueo |
 | Existe plan del architect en los comentarios | Síguelo; desviaciones justificadas en el PR |
+| El plan trae estrategia de entrega ODD | Respeta `delivery_strategy`/`chain_strategy` antes del primer commit (regla de `chained-pr`) |
 | Diff proyectado > 400 líneas | Slicing con `chained-pr` (stacked o chain con tracker) |
 | Verificación por stack | backend: `make test && make lint` · android: `./gradlew :app:lint testDebugUnitTest` · iOS: `xcodebuild test -scheme Tranqui ...` · contracts: lint de OpenAPI. Usa el primero que exista para el código que tocas |
 | Aparece trabajo fuera del alcance | Issue nuevo; nota en el PR "follow-up: #M" |
