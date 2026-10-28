@@ -1,0 +1,19 @@
+# Lint del backend — golangci-lint v2 (versión pinneada en el Makefile).
+# Set requerido por docs/stack/backend-go.md: errcheck, govet, staticcheck,
+# revive, gocritic, rowserrcheck, noctx. Formato: gofumpt (formatters).
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - gocritic
+    - rowserrcheck
+    - noctx
+
+formatters:
+  enable:
+    - gofumpt
