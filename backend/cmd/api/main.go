@@ -51,9 +51,10 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthz.New(cfg.Version))
 	// Chain order per docs/stack/backend-go.md, outermost first:
-	// request-id -> recovery (request logging slots between them in the next
-	// PR of the chain). Request-id runs outside so panic logs carry it.
-	handler := httpmw.RequestID(httpmw.Recovery(log)(mux))
+	// request-id -> request-logging -> recovery. Request-logging wraps
+	// recovery so the per-request record carries the true 500 of a panic,
+	// and request-id runs outside so every log carries it.
+	handler := httpmw.RequestID(httpmw.RequestLogging(log)(httpmw.Recovery(log)(mux)))
 
 	log.Info("api listening",
 		slog.String("addr", ln.Addr().String()),
