@@ -26,6 +26,121 @@ tags:
     description: Authenticated user profile and check-in preferences.
 # Paths for week 1 (issue #2): auth + profile in P2, contacts + checkins in P3.
 paths:
+  /contacts:
+    get:
+      operationId: listContacts
+      description: >
+        Lists the trusted circle (1-5 contacts depending on plan). No
+        pagination: the collection is product-bounded (<=5), so cursor
+        pagination from the guidelines does not apply here.
+      tags: [contacts]
+      responses:
+        '200':
+          description: Trusted circle, in display order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactList'
+              example:
+                contacts:
+                  - id: 01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a
+                    name: María
+                    phone: '+5215598765432'
+                    createdAt: '2026-10-20T15:30:00Z'
+                  - id: 01934f30-9b3d-7e5f-b06b-3c4d5e6f7a8b
+                    name: Jorge
+                    phone: '+5215511223344'
+                    createdAt: '2026-10-21T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createContact
+      description: >
+        Adds a contact (name + phone). The contact never registers: the
+        POST triggers a WhatsApp/SMS welcome message with what to expect.
+        Fails with 422 CONTACT_LIMIT_REACHED when the plan quota is full.
+      tags: [contacts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactCreate'
+            example:
+              name: María
+              phone: '+5215598765432'
+      responses:
+        '201':
+          description: Contact added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+              example:
+                id: 01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a
+                name: María
+                phone: '+5215598765432'
+                createdAt: '2026-10-20T15:30:00Z'
+        '400':
+          description: Invalid name or phone.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/validation-failed
+                title: Validation failed
+                status: 400
+                detail: phone must be E.164, e.g. +5215598765432.
+                code: VALIDATION_FAILED
+                instance: /v1/contacts
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Plan contact quota reached.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/contact-limit-reached
+                title: Límite de contactos alcanzado
+                status: 422
+                detail: El plan gratuito permite hasta 1 contacto. Actualiza a Premium.
+                code: CONTACT_LIMIT_REACHED
+                instance: /v1/contacts
+  /contacts/{id}:
+    delete:
+      operationId: deleteContact
+      description: Removes a contact from the trusted circle.
+      tags: [contacts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Contact id (UUID v7).
+          schema:
+            type: string
+            format: uuid
+          example: 01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a
+      responses:
+        '204':
+          description: Contact removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown contact id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/contact-not-found
+                title: Contact not found
+                status: 404
+                detail: No contact with this id in your circle.
+                code: CONTACT_NOT_FOUND
+                instance: /v1/contacts/01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a
   /auth/otp/request:
     post:
       operationId: requestOtp
@@ -365,6 +480,52 @@ components:
           minimum: 0
           maximum: 1440
           example: 90
+    Contact:
+      description: 'Trusted-circle contact (R-03): name + phone, nothing else.'
+      type: object
+      required: [id, name, phone, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Contact id (UUID v7).
+          example: 01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a
+        name:
+          type: string
+          description: Display name.
+          minLength: 1
+          maxLength: 80
+          example: María
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp (RFC 3339, UTC).
+          example: '2026-10-20T15:30:00Z'
+    ContactCreate:
+      description: New contact payload.
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: María
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+    ContactList:
+      description: Trusted circle; product-bounded to 5 contacts, no paging.
+      type: object
+      required: [contacts]
+      properties:
+        contacts:
+          type: array
+          minItems: 0
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/Contact'
   responses:
     Unauthorized:
       description: Missing, expired or invalid credentials.
