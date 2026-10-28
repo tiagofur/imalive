@@ -1,0 +1,28 @@
+name: Task
+description: Trabajo de la fábrica o de infraestructura (no feature de producto)
+labels: ["type:task", "status:nuevo"]
+body:
+  - type: textarea
+    id: que
+    attributes:
+      label: Qué hay que hacer
+    validations:
+      required: true
+  - type: textarea
+    id: hecho
+    attributes:
+      label: Criterios de hecho
+      description: Verificables con comandos o comprobaciones concretas
+    validations:
+      required: true
+  - type: textarea
+    id: no-objetivos
+    attributes:
+      label: No-objetivos
+  - type: checkboxes
+    id: humano
+    attributes:
+      label: ¿Requiere acción humana?
+      description: Dinero, credenciales, cuentas externas, decisiones que un agente no puede tomar
+      options:
+        - label: Sí (el triage marcará también needs-human)

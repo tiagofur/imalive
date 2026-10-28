@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Dependencias y builds
+node_modules/
+build/
+dist/
+.dart_tool/
+.pub-cache/
+
+# Editor
+*.iml
+.idea/
+.vscode/
+
+# Herramientas locales de la fábrica
+.atl/

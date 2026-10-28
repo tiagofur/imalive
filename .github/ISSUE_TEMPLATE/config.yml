@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Flujo de desarrollo (issue → PR)
+    url: https://github.com/tiagofur/imalive/blob/main/docs/procesos/flujo-desarrollo.md
+    about: Cómo se trabaja en esta fábrica. Léelo antes de abrir un issue.
+  - name: AGENTS.md — reglas para agentes
+    url: https://github.com/tiagofur/imalive/blob/main/AGENTS.md
+    about: Jerarquía de verdad, decisiones inamovibles y prohibiciones.
+  - name: Spec de producto
+    url: https://github.com/tiagofur/imalive/blob/main/producto.md
+    about: Qué es Tranqui y qué entra o no entra.

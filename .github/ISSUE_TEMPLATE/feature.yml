@@ -1,0 +1,34 @@
+name: Feature
+description: Nueva funcionalidad del producto o de la fábrica
+labels: ["type:feature", "status:nuevo"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema o valor
+      description: Qué problema resuelve y para quién (persona de producto.md si aplica)
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+      description: Qué propones construir, en 3-6 frases
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: >
+        Verificables con un comando, una acción concreta o un estado observable.
+        El triage los refinará.
+      placeholder: |
+        1. Dado X, cuando Y, entonces Z
+    validations:
+      required: true
+  - type: textarea
+    id: no-objetivos
+    attributes:
+      label: No-objetivos
+      description: Qué NO entra en este issue
