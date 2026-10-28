@@ -141,6 +141,69 @@ paths:
                 detail: No contact with this id in your circle.
                 code: CONTACT_NOT_FOUND
                 instance: /v1/contacts/01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a
+  /checkins:
+    post:
+      operationId: createCheckin
+      description: >
+        Records today's "I'm OK" signal (R-04, one tap on home). Idempotent
+        by design: accepts Idempotency-Key; 201 on first signal of the day,
+        200 replaying the same-day signal.
+      tags: [checkins]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Client-generated key; replays return the same signal.
+          schema:
+            type: string
+            maxLength: 64
+          example: 01934f31-0a4e-7f60-c17c-4d5e6f7a8b9c
+      responses:
+        '201':
+          description: First signal of the day recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkin'
+              example:
+                date: '2026-10-28'
+                checkedInAt: '2026-10-28T07:58:00Z'
+                replayed: false
+        '200':
+          description: Same-day replay (idempotent).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkin'
+              example:
+                date: '2026-10-28'
+                checkedInAt: '2026-10-28T07:58:00Z'
+                replayed: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /checkins/today:
+    get:
+      operationId: getTodayStatus
+      description: >
+        Returns today's cycle status for the home screen ("Siguiente
+        check-in: hoy 21:00"). Coarse engine states only (pending |
+        confirmed | paused); fine states and the streak (R-12, week 3)
+        arrive later as additive fields.
+      tags: [checkins]
+      responses:
+        '200':
+          description: Today's cycle status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodayStatus'
+              example:
+                date: '2026-10-28'
+                status: pending
+                checkedInAt: null
+                nextCheckinAt: '2026-10-29T03:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /auth/otp/request:
     post:
       operationId: requestOtp
@@ -526,6 +589,52 @@ components:
           maxItems: 5
           items:
             $ref: '#/components/schemas/Contact'
+    Checkin:
+      description: Today's recorded "I'm OK" signal.
+      type: object
+      required: [date, checkedInAt, replayed]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Cycle date (YYYY-MM-DD).
+          example: '2026-10-28'
+        checkedInAt:
+          type: string
+          format: date-time
+          description: Signal timestamp (RFC 3339, UTC).
+          example: '2026-10-28T07:58:00Z'
+        replayed:
+          type: boolean
+          description: True when this response replays an existing signal.
+          example: false
+    TodayStatus:
+      description: >
+        Today's cycle status (coarse engine states). Models today only:
+        no past days, no coordinates. Streak and fine states are additive later.
+      type: object
+      required: [date, status, nextCheckinAt]
+      properties:
+        date:
+          type: string
+          format: date
+          description: Cycle date (YYYY-MM-DD).
+          example: '2026-10-28'
+        status:
+          type: string
+          description: Coarse cycle state.
+          enum: [pending, confirmed, paused]
+          example: pending
+        checkedInAt:
+          type: [string, 'null']
+          format: date-time
+          description: Signal timestamp, or null when still pending.
+          example: null
+        nextCheckinAt:
+          type: string
+          format: date-time
+          description: When the next signal is expected (RFC 3339, UTC).
+          example: '2026-10-29T03:00:00Z'
   responses:
     Unauthorized:
       description: Missing, expired or invalid credentials.
