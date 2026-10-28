@@ -146,6 +146,74 @@ paths:
                 expiresInSeconds: 900
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /me:
+    get:
+      operationId: getProfile
+      description: >
+        Returns the authenticated user's profile: name, phone and
+        check-in preferences. The full escalation ladder lives in
+        PUT /escalation-policy (week 2); only the grace window is here.
+      tags: [profile]
+      responses:
+        '200':
+          description: Current profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              example:
+                id: 01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f
+                name: Ana
+                phone: '+5215512345678'
+                checkinTime: '21:00'
+                timezone: America/Mexico_City
+                escalationWindowMinutes: 60
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      operationId: updateProfile
+      description: >
+        Partially updates the profile (name, check-in time, timezone,
+        grace window). Omitted fields keep their values.
+      tags: [profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilePatch'
+            example:
+              checkinTime: '22:00'
+              escalationWindowMinutes: 90
+      responses:
+        '200':
+          description: Updated profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              example:
+                id: 01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f
+                name: Ana
+                phone: '+5215512345678'
+                checkinTime: '22:00'
+                timezone: America/Mexico_City
+                escalationWindowMinutes: 90
+        '400':
+          description: Invalid field value.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/validation-failed
+                title: Validation failed
+                status: 400
+                detail: checkinTime must be HH:MM in 24h format.
+                code: VALIDATION_FAILED
+                instance: /v1/me
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     bearerAuth:
@@ -239,6 +307,64 @@ components:
           type: string
           description: Valid refresh token from a previous issue/rotation.
           example: 7f3a9c2e5b1d4a6f8e0c3b5d7a9e1f2a4
+    UserProfile:
+      description: >
+        Authenticated user profile (R-02). Minimum data: no email,
+        address, notes or avatar. The full ladder is week 2.
+      type: object
+      required: [id, name, phone, checkinTime, timezone, escalationWindowMinutes]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User id (UUID v7).
+          example: 01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f
+        name:
+          type: string
+          description: Display name.
+          minLength: 1
+          maxLength: 80
+          example: Ana
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+        checkinTime:
+          type: string
+          description: Daily check-in time (HH:MM, 24h) in the user timezone.
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '21:00'
+        timezone:
+          type: string
+          description: IANA timezone; the engine requires it explicit.
+          example: America/Mexico_City
+        escalationWindowMinutes:
+          type: integer
+          description: Grace window in minutes before escalation (default 60).
+          minimum: 0
+          maximum: 1440
+          default: 60
+          example: 60
+    ProfilePatch:
+      description: Partial profile update; omitted fields keep their values.
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: Ana
+        checkinTime:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          example: '22:00'
+        timezone:
+          type: string
+          example: America/Mexico_City
+        escalationWindowMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          example: 90
   responses:
     Unauthorized:
       description: Missing, expired or invalid credentials.
