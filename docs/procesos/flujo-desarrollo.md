@@ -7,8 +7,10 @@ Regla madre: **sin issue no hay código; `main` solo recibe merges de PR.**
 ```mermaid
 flowchart LR
     A["Issue<br/>status:nuevo"] -->|triage| B["status:ready"]
+    B -->|"designer (ux:shape)"| D["Brief UX<br/>en el issue"]
     B -->|"architect (size m+)"| P["Plan técnico<br/>en el issue"]
     B -->|"implementer<br/>rama + work units"| C["PR abierto<br/>status:in-review"]
+    D -.->|"insumo del plan"| P
     P --> C
     C -->|"CI verde + reviewer APPROVE"| D["Merge a main"]
     D --> E["Issue cerrado<br/>Closes #N"]
@@ -27,6 +29,7 @@ flowchart LR
 | `status:in-review` | PR abierto | Implementación |
 | `status:bloqueado` | Espera decisión/credencial humana (siempre con comentario que explique qué falta) | Cualquiera |
 | `needs-human` | Requiere acción humana: dinero, credenciales, cuentas externas, legal | Triage |
+| `ux:shape` | Cambio UX considerable: brief del `designer` antes del plan técnico | Triage |
 | `priority:p0` · `p1` · `p2` | p0 bloquea el loop del producto · p1 esta semana · p2 cuando quepa | Triage |
 | `size:xs` · `s` · `m` · `l` | xs <1h · s <4h · m <2d · l >2d (`l` ⇒ partir o chained-pr) | Triage |
 
@@ -42,7 +45,7 @@ flowchart LR
 
 - [ ] CI verde en los jobs del stack tocado.
 - [ ] Criterios de aceptación cubiertos, con evidencia en el PR.
-- [ ] Revisión aprobada, sin hallazgos P0/P1 abiertos.
+- [ ] Revisión aprobada (simple o dual según los triggers de `pr-review`), sin hallazgos P0/P1 abiertos.
 - [ ] Tests y docs incluidos en los mismos commits que el comportamiento.
 - [ ] Issue cerrado con `Closes #N`.
 - [ ] PR ≤ 400 changed lines o chain justificada.
@@ -57,11 +60,12 @@ flowchart LR
 
 Ejecutar periódicamente esta secuencia mantiene la fábrica moviéndose sin intervención humana:
 
-1. **Triage**: issues `status:nuevo` → `status:ready` / `status:bloqueado`.
-2. **Arquitectura**: issues `status:ready` de `size:m+` sin plan técnico → plan en el issue.
-3. **Implementación**: el issue `status:ready` de mayor prioridad sin PR → `implementer`.
-4. **Revisión**: PRs abiertos sin revisar → `reviewer`.
-5. **Cierre**: PR aprobado con CI verde → merge, confirmar cierre del issue, siguiente.
+1. **Triage**: issues `status:nuevo` → `status:ready` / `status:bloqueado` (con `ux:shape` donde aplique).
+2. **Diseño**: issues `ux:shape` sin brief publicado → `designer` (brief en el issue, antes de cualquier plan).
+3. **Arquitectura**: issues `status:ready` de `size:m+` sin plan técnico → plan del `architect` (absorbido el brief UX si lo hay, con estrategia de entrega ODD).
+4. **Implementación**: el issue `status:ready` de mayor prioridad sin PR → `implementer`.
+5. **Revisión**: PRs abiertos sin revisar → `reviewer` (escala a dual según triggers).
+6. **Cierre**: PR aprobado con CI verde → merge, confirmar cierre del issue, siguiente.
 
 Reglas: un issue a la vez por rama; si todo está bloqueado o no hay trabajo `status:ready`, terminar reportando los bloqueos — nunca inventar trabajo. El merge autónomo exige CI verde + `APPROVE` + criterios con evidencia.
 

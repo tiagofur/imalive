@@ -35,6 +35,7 @@ Load this skill when reviewing a factory PR, when asked for a second review, or 
    - [ ] Cada commit es una work unit coherente (tests/docs con el comportamiento)
    - [ ] Los criterios de aceptación están cubiertos y con evidencia en el PR
    - [ ] Alcance cerrado: nada fuera del issue (follow-ups referenciados, no mezclados)
+   - [ ] Si el issue lleva `ux:shape`: evidencia visual adjunta y build fiel al brief UX (tesis, composición, estados)
    - [ ] Privacidad respetada (cero historial de ubicación, mínimos datos, append-only en incidentes)
    - [ ] Contrato OpenAPI: sin cambios rompientes (ADR-0003)
    - [ ] `Closes #N` correcto; CI en verde; no rompe `main`
