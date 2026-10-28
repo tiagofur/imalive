@@ -26,6 +26,7 @@ test: ## go test -race -cover ./...
 
 run: ## docker compose up -d postgres redis && go run ./cmd/api
 	docker compose up -d postgres redis
+	set -a; [ -f .env ] && . ./.env; set +a; \
 	$(GO) run ./cmd/api
 
 $(GOLANGCI_LINT):

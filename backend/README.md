@@ -12,15 +12,16 @@ logging; cero endpoints de producto (el contrato OpenAPI llega con el issue #2).
 ## Entorno local
 
 ```bash
-cp .env.example .env        # credenciales locales de docker-compose; .env está gitignoreado
+cp .env.example .env        # config local de compose y de la api; .env está gitignoreado
 make run                    # postgres + redis (compose) y la api en :8080
 curl localhost:8080/healthz # {"status":"ok","version":"dev"}
 ```
 
 `make run` levanta `postgres:16` y `redis:7` con healthchecks
 ([docker-compose.yml](docker-compose.yml)) y arranca la api en el host con la
-config de `.env`. Para parar: `docker compose down` (los datos de Postgres
-persisten en el volumen `postgres-data`).
+config de `.env` (el target lo carga antes de ejecutar `go run ./cmd/api`; sin
+`.env`, exporta las variables a mano). Para parar: `docker compose down` (los
+datos de Postgres persisten en el volumen `postgres-data`).
 
 ## Comandos
 
