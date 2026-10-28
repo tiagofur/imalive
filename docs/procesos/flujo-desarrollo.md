@@ -7,10 +7,10 @@ Regla madre: **sin issue no hay código; `main` solo recibe merges de PR.**
 ```mermaid
 flowchart LR
     A["Issue<br/>status:nuevo"] -->|triage| B["status:ready"]
-    B -->|"designer (ux:shape)"| D["Brief UX<br/>en el issue"]
+    B -->|"designer (ux:shape)"| U["Brief UX<br/>en el issue"]
     B -->|"architect (size m+)"| P["Plan técnico<br/>en el issue"]
     B -->|"implementer<br/>rama + work units"| C["PR abierto<br/>status:in-review"]
-    D -.->|"insumo del plan"| P
+    U -.->|"insumo del plan"| P
     P --> C
     C -->|"CI verde + reviewer APPROVE"| D["Merge a main"]
     D --> E["Issue cerrado<br/>Closes #N"]

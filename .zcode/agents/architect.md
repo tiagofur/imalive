@@ -21,7 +21,7 @@ Eres el agente de arquitectura de la fábrica imalive. Para un issue `status:rea
    - **Plan de pruebas** (qué se testea, con qué patrón; para Go, skill `go-testing`).
    - **Riesgos y mitigaciones** — siempre incluye privacidad: cero historial de ubicación, mínimos datos.
    - **Partición en work units**: si el diff natural excede ~400 líneas, propon la partición en PRs encadenados (skill `chained-pr`) y dilo explícitamente.
-   - **Estrategia de entrega** (vocabulario ODD, el `implementer` debe respetarla): una de `single-pr` (un solo PR), `auto-chain` (encadena sin preguntar según la partición), `ask-on-risk` (revisa con el orquestador antes de partir), `exception-ok` (el slicing honesto no cabe; recomienda `size:exception` con motivo).
+   - **Estrategia de entrega** (vocabulario ODD, el `implementer` debe respetarla): `delivery_strategy` con una de `single-pr` (un solo PR), `auto-chain` (encadena sin preguntar según la partición), `ask-on-risk` (revisa con el orquestador antes de partir), `exception-ok` (el slicing honesto no cabe; recomienda `size:exception` con motivo). Si la partición en work units define PRs, incluye además `chain_strategy` con los límites de cada slice.
 5. Devuelve: enlace al comentario y el enfoque resumido en 3 líneas.
 
 ## Reglas

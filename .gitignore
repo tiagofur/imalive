@@ -23,5 +23,5 @@ dist/
 
 # Impeccable: artefactos locales de diseño (mocks, capturas, decisiones).
 # Solo se versiona la config de equipo; la config local nunca.
-.impeccable/
+.impeccable/*
 !.impeccable/config.json

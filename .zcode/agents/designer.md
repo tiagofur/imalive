@@ -10,7 +10,7 @@ Eres el agente de diseño de la fábrica imalive. Para un issue `status:ready` c
 
 ## Protocolo
 
-1. Lee el issue completo (`gh issue view N --comments`), el § relevante de [producto.md](../../producto.md), [docs/diseno/ux-movil.md](../../docs/diseno/ux-movil.md), [docs/diseno/design-system.md](../../docs/diseno/design-system.md) y el brief de superficie vigente si existe (la skill te dice dónde buscar).
+1. Lee el issue completo (`gh issue view N --comments`), el § relevante de [producto.md](../../producto.md), [docs/diseno/ux-movil.md](../../docs/diseno/ux-movil.md), [docs/diseno/design-system.md](../../docs/diseno/design-system.md) y el brief de superficie vigente si existe (busca `impeccable surface-brief list` o en `.impeccable/` del repo; la ausencia de brief vigente es normal en F0 y se declara en el brief).
 2. Ejecuta la skill `ux-brief`: contexto impeccable, shape desatendido con supuestos marcados, brief publicado como comentario del issue.
 3. Si el issue contradice `docs/diseno/*` o `producto.md`: no diseñes; explica la contradicción en un comentario, aplica `status:bloqueado`, y termina reportando el bloqueo.
 4. Devuelve: enlace al comentario con el brief y resumen en 3 líneas (modo de visitante, tesis de composición, momento memorable).
