@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: Tranqui API
+  version: 0.1.0
+  description: >
+    Tranqui backend API (contract-first, ADR-0003). This contract is the
+    negotiation point between backend, Android and iOS: endpoints are
+    described here first, reviewed in PR, then implemented. Week 1 covers
+    phone OTP auth, profile, contacts and manual check-in.
+  contact:
+    name: Tranqui factory
+    url: https://github.com/tiagofur/imalive
+servers:
+  - url: https://api.tranqui.app/v1
+    description: Production (placeholder domain until hosting ADR-0006).
+security:
+  - bearerAuth: []
+tags:
+  - name: auth
+    description: Phone OTP authentication and session refresh.
+  - name: checkins
+    description: Manual check-in signal and today's cycle status.
+  - name: contacts
+    description: Trusted circle (1-5 contacts depending on plan).
+  - name: profile
+    description: Authenticated user profile and check-in preferences.
+# Paths land in P2 (auth, profile) and P3 (contacts, checkins) of issue #2.
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Short-lived access JWT (15 min). Only the auth endpoints are
+        public (`security: []`); everything else requires this scheme.
+  schemas:
+    Problem:
+      description: >
+        RFC 9457 problem details with a stable business `code` consumed by
+        the apps for copy and decisions (api-guidelines).
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Stable URI identifying the problem kind.
+          example: https://api.tranqui.app/problems/contact-limit-reached
+        title:
+          type: string
+          description: Short human-readable summary.
+          example: Límite de contactos alcanzado
+        status:
+          type: integer
+          description: HTTP status code of the response.
+          example: 422
+        detail:
+          type: string
+          description: Specific explanation of this occurrence.
+          example: El plan gratuito permite hasta 1 contacto.
+        code:
+          type: string
+          description: Stable business code (what the apps switch on).
+          example: CONTACT_LIMIT_REACHED
+        instance:
+          type: string
+          format: uri-reference
+          description: URI of this specific occurrence.
+          example: /v1/contacts
+  responses:
+    Unauthorized:
+      description: Missing, expired or invalid credentials.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.tranqui.app/problems/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: Missing, expired or invalid credentials.
+            code: UNAUTHORIZED
+            instance: /v1/me
+    TooManyRequests:
+      description: Rate limit exceeded; wait for Retry-After seconds.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 1
+            example: 60
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.tranqui.app/problems/rate-limited
+            title: Too Many Requests
+            status: 429
+            detail: Too many requests; slow down and retry later.
+            code: RATE_LIMITED
+            instance: /v1/auth/otp/request

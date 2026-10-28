@@ -1,0 +1,33 @@
+# Spectral ruleset for the Tranqui contract (issue #2).
+# Extends spectral:oas (OpenAPI 3.x rules, recommended set) with factory gates:
+# unique operationIds, mandatory operation descriptions, examples validated
+# against their schemas, RFC 9457 Problem error responses, and a privacy gate
+# (`no-location-fields`) that fails CI if location fields sneak into the spec.
+extends: spectral:oas
+rules:
+  operation-operationId-unique: error
+  operation-description: error
+  oas3-valid-media-example: error
+  oas3-valid-schema-example: error
+  no-location-fields:
+    description: >
+      Privacy gate (producto.md §H): no location fields may be modelled in
+      the contract. Fails CI so the triage grep becomes an enforced check.
+    message: Property name looks like a location field; location data must never be modelled in the contract (producto.md §H).
+    severity: error
+    given: $..properties[*]~
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: '/latitude|longitude|geo|location|\b(lat|lon|lng)\b/i'
+  error-responses-use-problem:
+    description: 4xx/5xx responses must use the RFC 9457 Problem schema.
+    message: Error response must use application/problem+json with the Problem schema.
+    severity: error
+    given:
+      - $.paths[*][*].responses['400','401','403','404','409','422','429'].content
+      - $.paths[*][*].responses['500','502','503'].content
+      - $.components.responses[*].content
+    then:
+      field: application/problem+json
+      function: truthy
