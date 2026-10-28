@@ -1,6 +1,7 @@
 # CI/CD y releases
 
 > Última actualización: 2026-10-27. Monorepo (ADR-0005): cada pipeline se dispara por rutas.
+> Estado actual: existe el workflow semilla [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) (lint+test por stack, activado por presencia del código). Este documento describe el estado objetivo; ampliar el CI es trabajo del roadmap F0.
 
 ## GitHub Actions — workflows
 
