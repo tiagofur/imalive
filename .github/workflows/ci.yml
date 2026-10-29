@@ -92,7 +92,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: ./gradlew :app:lint testDebugUnitTest
+      - run: ./gradlew :app:lint testDebugUnitTest detekt ktlintCheck
 
   ios:
     name: iOS
