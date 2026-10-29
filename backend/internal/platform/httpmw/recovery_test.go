@@ -79,6 +79,31 @@ func TestRecoveryAbsorbsRepeatedPanics(t *testing.T) {
 	}
 }
 
+// http.ErrAbortHandler is the net/http convention for a deliberate response
+// abort, not a bug: Recovery re-raises it for the server to handle silently
+// instead of logging it as a crash or writing over the aborted response
+// (JD ledger JD-8).
+func TestRecoveryReraisesErrAbortHandler(t *testing.T) {
+	var buf bytes.Buffer
+	handler := Recovery(testLogger(&buf))(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(http.ErrAbortHandler)
+	}))
+
+	defer func() {
+		rec := recover()
+		if rec == nil {
+			t.Fatal("Recovery absorbed http.ErrAbortHandler, want it re-raised")
+		}
+		if rec != http.ErrAbortHandler {
+			t.Fatalf("recovered %v, want http.ErrAbortHandler", rec)
+		}
+		if records := decodeLogLines(t, &buf); len(records) != 0 {
+			t.Fatalf("logged %v, want no panic record for a deliberate abort", records)
+		}
+	}()
+	_ = serve(handler, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil))
+}
+
 // The chain runs request-id outside recovery (docs/stack/backend-go.md): the
 // panic record must carry the same id the client sees in X-Request-ID.
 func TestChainPanicRecordCarriesRequestID(t *testing.T) {
