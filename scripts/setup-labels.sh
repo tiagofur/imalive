@@ -33,4 +33,9 @@ mk "size:l"      "bfd4f2" "Más de 2 días; partir o chained-pr"
 # Diseño
 mk "ux:shape" "c7def8" "Cambio UX considerable: brief del designer antes del plan"
 
+# Gobernanza (contrato, revisión dual, excepciones de tamaño)
+mk "contract-break"  "b60205" "Cambio rompiente de OpenAPI autorizado por un humano"
+mk "judgment-day"    "000000" "Requiere revisión dual ciega (dos jueces independientes)"
+mk "size:exception"  "d4c5f9" "PR > 400 líneas justificado explícitamente"
+
 echo "Labels listos."
