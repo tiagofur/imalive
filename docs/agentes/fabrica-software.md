@@ -52,6 +52,15 @@ El desarrollo es realizado por agentes autónomos supervisados por el fundador. 
 5. Secretos nunca en repo; credenciales reales nunca en tests (solo sandbox).
 6. `main` solo recibe merges de PR con CI verde; nadie pushea a `main`.
 
+## Guardarraíles ejecutables (solo lectura salvo indicación)
+
+| Script | Uso |
+|---|---|
+| `python3 scripts/factory_preflight.py` | Arranque de sesión: verifica archivos de la fábrica y estado de git. No corre tests ni autoriza escrituras. `--require-clean` antes de entregar. |
+| `python3 scripts/factory_handoff.py --base origin/main --head <sha> --issue <N>` | Paquete de revisión con contexto limpio: SHAs fijados, digest, diff y triggers de revisión dual. Única entrada del revisor. |
+| `scripts/setup-labels.sh` | Taxonomía de labels (incluye `contract-break`, `judgment-day`, `size:exception`). |
+| `python3 -m unittest discover -s tests` | Tests de los guardarraíles. |
+
 ## Antes de terminar una sesión
 
 - [ ] Issues movidos de estado con comentarios explicando el resultado.

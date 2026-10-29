@@ -13,6 +13,7 @@ Load this skill when reviewing a factory PR, when asked for a second review, or 
 
 - La barra de aceptación son los criterios del issue que el PR cierra, no el gusto del revisor.
 - Read-only sobre el código del PR: leer, correr tests/lint, escribir la revisión. Nada de edits.
+- **Contexto limpio**: el revisor NO lee la conversación ni el razonamiento del implementador. Su única entrada es el paquete de `python3 scripts/factory_handoff.py` (SHAs `base`/`head` fijados, digest, diff, criterios del issue) más el issue y el PR en GitHub. Si el paquete no existe o los SHAs no coinciden con el PR, el veredicto es bloqueo, no revisión.
 - Privacidad primero (`producto.md` §H, ADR-0004): persistencia de ubicación o historial de ubicaciones, ampliación de datos personales, incidentes no append-only, o claims de "emergencia médica" son P0 aunque funcionen.
 - Presupuesto de revisión ≤ 400 changed lines; un PR mayor se revisa igual y se recomienda chain o `size:exception`.
 - Sin P0/P1 abiertos no se piden cambios: `APPROVE` con P2/P3 anotados.
@@ -29,7 +30,7 @@ Load this skill when reviewing a factory PR, when asked for a second review, or 
 
 ## Execution Steps
 
-1. Contexto: `gh pr view`, `gh pr diff` y el issue cerrado por el PR (criterios = barra).
+1. Contexto: genera el paquete con `python3 scripts/factory_handoff.py --base origin/main --head <sha-del-PR> --issue <N> --acceptance "<criterios del issue>" --output-md /tmp/pr-<N>-handoff.md`, léelo, y complétalo con `gh pr view`, `gh pr diff` y el issue cerrado por el PR (criterios = barra). Si el paquete marca `judgment_day_required: true`, aplica la sección "Revisión dual automática".
 2. Ejecutar la verificación del stack tocado (backend `make test && make lint` · android gradle · iOS xcodebuild · contracts lint OpenAPI) y registrar comandos/resultados exactos.
 3. Checklist:
    - [ ] Cada commit es una work unit coherente (tests/docs con el comportamiento)
