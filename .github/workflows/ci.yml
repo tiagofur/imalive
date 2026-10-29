@@ -27,6 +27,19 @@ jobs:
           ls apps/ios/*.xcodeproj/project.pbxproj >/dev/null 2>&1 && echo "ios=true" >> "$GITHUB_OUTPUT" || echo "ios=false" >> "$GITHUB_OUTPUT"
           test -f contracts/openapi.yaml && echo "contracts=true" >> "$GITHUB_OUTPUT" || echo "contracts=false" >> "$GITHUB_OUTPUT"
 
+  factory:
+    name: Factory guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/factory_preflight.py
+      - run: python3 -m unittest discover -s tests -p "test_*.py" -v
+
   backend:
     name: Backend (Go)
     runs-on: ubuntu-latest
