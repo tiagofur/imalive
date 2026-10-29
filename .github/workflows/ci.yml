@@ -17,6 +17,7 @@ jobs:
       backend: ${{ steps.stacks.outputs.backend }}
       android: ${{ steps.stacks.outputs.android }}
       ios: ${{ steps.stacks.outputs.ios }}
+      contracts: ${{ steps.stacks.outputs.contracts }}
     steps:
       - uses: actions/checkout@v4
       - id: stacks
@@ -24,6 +25,7 @@ jobs:
           test -f backend/go.mod && echo "backend=true" >> "$GITHUB_OUTPUT" || echo "backend=false" >> "$GITHUB_OUTPUT"
           test -f apps/android/settings.gradle.kts && echo "android=true" >> "$GITHUB_OUTPUT" || echo "android=false" >> "$GITHUB_OUTPUT"
           ls apps/ios/*.xcodeproj/project.pbxproj >/dev/null 2>&1 && echo "ios=true" >> "$GITHUB_OUTPUT" || echo "ios=false" >> "$GITHUB_OUTPUT"
+          test -f contracts/openapi.yaml && echo "contracts=true" >> "$GITHUB_OUTPUT" || echo "contracts=false" >> "$GITHUB_OUTPUT"
 
   backend:
     name: Backend (Go)
@@ -40,6 +42,28 @@ jobs:
           go-version-file: backend/go.mod
       - run: make lint
       - run: make test
+
+  contracts:
+    name: Contracts (OpenAPI)
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.contracts == 'true'
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # make diff compares against origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # Spectral >= 22 required; see contracts/Makefile
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod # oasdiff via `go install`
+      - run: make lint
+      - run: make diff
+        continue-on-error: ${{ contains(github.event.pull_request.labels.*.name, 'contract-break') }}
 
   android:
     name: Android

@@ -48,6 +48,8 @@ SwiftUI, Observation (`@Observable`), Swift Concurrency (async/await, actors), U
 | Uso | Herramienta |
 |---|---|
 | Generación de clientes | `openapi-generator-cli` (Kotlin → OkHttp/retrofit2; Swift → URLSession async/await) |
+| Lint del contrato OpenAPI | `Spectral` (`@stoplight/spectral-cli`, versión pinneada en `contracts/Makefile`, instalado on-demand vía `npx`) — gate contract-first de ADR-0003: valida el spec, exige `operationId`/descripciones/examples coherentes y aplica la regla de privacidad `no-location-fields` (producto.md §H). Descartado Redocly CLI (su bundle multi-archivo no aporta con un spec único). |
+| Diff del contrato (breaking changes) | `oasdiff` (binario Go, versión pinneada en `contracts/Makefile`, instalado con `go install`) — compara cada PR contra `main` y falla ante cambios incompatibles (válvula: label `contract-break`). Descartado `openapi-diff` (centrado en OpenAPI 3.0, runtime Java). |
 | Lint backend | `golangci-lint` (+ `gofumpt`) |
 | Vulnerabilidades | `govulncheck` (Go), Dependabot/Renovate en todo el repo |
 | Tests E2E humo | Postman/Newman o script Go contra staging |
