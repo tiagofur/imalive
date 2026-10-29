@@ -24,7 +24,7 @@ diff: $(OASDIFF) ## breaking-change check of the spec against BASE (default orig
 		base=$$(mktemp -t openapi-base-XXXXXX.yaml); \
 		trap 'rm -f "$$base"' EXIT; \
 		git show "$(BASE):contracts/$(SPEC)" > "$$base"; \
-		$(OASDIFF) breaking "$$base" "$(SPEC)"; \
+		$(OASDIFF) breaking --fail-on ERR "$$base" "$(SPEC)"; \
 	else \
 		echo "contracts: no base spec at $(BASE) — skipping breaking-change check (first contracts PR)."; \
 	fi
