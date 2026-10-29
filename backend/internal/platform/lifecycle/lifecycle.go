@@ -16,16 +16,22 @@ func SignalContext() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 }
 
-// Run executes fn for every tick received from ticks until ctx is cancelled,
-// then returns nil. fn runs synchronously on the caller goroutine: cycles
-// never overlap by construction. The production ticker (time.NewTicker) or a
-// test channel can feed ticks, which keeps the loop deterministic to test.
+// Run executes fn for every tick received from ticks until ctx is cancelled
+// or the ticks channel is closed, then returns nil. fn runs synchronously on
+// the caller goroutine: cycles never overlap by construction. The production
+// ticker (time.NewTicker) or a test channel can feed ticks, which keeps the
+// loop deterministic to test. A closed channel ends the loop: without this
+// guard the receive on a closed channel is always ready and the loop would
+// spin at 100% CPU (JD ledger JD-4).
 func Run(ctx context.Context, ticks <-chan time.Time, fn func(ctx context.Context)) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticks:
+		case _, ok := <-ticks:
+			if !ok {
+				return nil
+			}
 			if fn != nil {
 				fn(ctx)
 			}
