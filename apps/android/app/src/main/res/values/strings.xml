@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MVP copy is Spanish (requisitos: español, i18n es/en/pt preparado desde el día 1). -->
+<resources>
+    <string name="app_name">Tranqui</string>
+</resources>

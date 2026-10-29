@@ -1,0 +1,7 @@
+# Detekt config (docs/stack/android.md): default rule set with build failures
+# enabled. Project-specific rules arrive when the codebase justifies them.
+build:
+  maxIssues: 0
+
+config:
+  validation: true
