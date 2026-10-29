@@ -19,7 +19,7 @@ rules:
     then:
       function: pattern
       functionOptions:
-        notMatch: '/latitude|longitude|geo|location|\b(lat|lon|lng)\b/i'
+        notMatch: '/latitude|longitude|geo|location|lat(?![a-z])|lon(?![a-z])|lng(?![a-z])/i'
   error-responses-use-problem:
     description: 4xx/5xx responses must use the RFC 9457 Problem schema.
     message: Error response must use application/problem+json with the Problem schema.
