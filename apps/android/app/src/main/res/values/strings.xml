@@ -2,4 +2,6 @@
 <!-- MVP copy is Spanish (requisitos: español, i18n es/en/pt preparado desde el día 1). -->
 <resources>
     <string name="app_name">Tranqui</string>
+    <string name="checkin_button_ok">Estoy OK</string>
+    <string name="home_next_checkin">Siguiente check-in: %1$s</string>
 </resources>
