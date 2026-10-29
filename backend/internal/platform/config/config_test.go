@@ -64,6 +64,31 @@ func TestFromEnv(t *testing.T) {
 			wantErr: `config: LOG_LEVEL "verbose" is not one of`,
 		},
 		{
+			name:    "slog offset form INFO+2 fails fast (not in the documented enum)",
+			env:     map[string]string{"APP_ENV": "local", "LOG_LEVEL": "INFO+2"},
+			wantErr: `config: LOG_LEVEL "INFO+2" is not one of`,
+		},
+		{
+			name:    "slog offset form ERROR+50 fails fast (would silence every record)",
+			env:     map[string]string{"APP_ENV": "local", "LOG_LEVEL": "ERROR+50"},
+			wantErr: `config: LOG_LEVEL "ERROR+50" is not one of`,
+		},
+		{
+			name:    "uppercase INFO fails fast (enum is lowercase)",
+			env:     map[string]string{"APP_ENV": "local", "LOG_LEVEL": "INFO"},
+			wantErr: `config: LOG_LEVEL "INFO" is not one of`,
+		},
+		{
+			name: "warn level parses",
+			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "warn"},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelWarn, Version: ""},
+		},
+		{
+			name: "error level parses",
+			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "error"},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelError, Version: ""},
+		},
+		{
 			name:    "non numeric port fails fast",
 			env:     map[string]string{"APP_ENV": "local", "PORT": "http"},
 			wantErr: `config: PORT "http" is not a valid TCP port`,

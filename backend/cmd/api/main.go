@@ -4,19 +4,17 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/tiagofur/imalive/backend/internal/platform/config"
 	"github.com/tiagofur/imalive/backend/internal/platform/healthz"
 	"github.com/tiagofur/imalive/backend/internal/platform/httpmw"
 	"github.com/tiagofur/imalive/backend/internal/platform/httpserver"
+	"github.com/tiagofur/imalive/backend/internal/platform/lifecycle"
 	"github.com/tiagofur/imalive/backend/internal/platform/logging"
 )
 
@@ -39,7 +37,9 @@ func run() error {
 	log := logging.New(os.Stdout, cfg.LogLevel)
 	slog.SetDefault(log)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	// Shared with the worker (lifecycle): graceful cancel on the first
+	// SIGINT/SIGTERM, force-exit if the operator sends a second one.
+	ctx, stop := lifecycle.SignalContext()
 	defer stop()
 
 	var lc net.ListenConfig

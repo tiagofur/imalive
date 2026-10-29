@@ -86,12 +86,23 @@ func FromEnv(getenv func(string) string, version string) (Config, error) {
 	return cfg, nil
 }
 
+// parseLevel accepts exactly the documented enum (debug, info, warn, error).
+// It deliberately avoids slog.Level.UnmarshalText: that accepts offset forms
+// like "INFO+2" whose extremes (ERROR+50) would silently drop every record,
+// including errors (fail-fast contract: no silently surprising levels).
 func parseLevel(s string) (slog.Level, error) {
-	var lvl slog.Level
-	if err := lvl.UnmarshalText([]byte(s)); err != nil {
+	switch s {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info":
+		return slog.LevelInfo, nil
+	case "warn":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
 		return slog.LevelInfo, fmt.Errorf("config: LOG_LEVEL %q is not one of debug, info, warn or error", s)
 	}
-	return lvl, nil
 }
 
 func required(getenv func(string) string, key string) (string, error) {

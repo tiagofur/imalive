@@ -1,9 +1,11 @@
 package httpmw
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -78,6 +80,73 @@ func TestRequestLogging(t *testing.T) {
 			t.Errorf("log output leaks query data: %s", buf.String())
 		}
 	})
+
+	// The recorder must not swallow writer capabilities behind the middleware
+	// (JD ledger JD-5): flushing reaches the wrapped writer, hijacking
+	// forwards when supported and degrades to an error when not.
+	t.Run("forwards Flush to the wrapped writer", func(t *testing.T) {
+		handler := RequestLogging(testLogger(&bytes.Buffer{}))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			f, ok := w.(http.Flusher)
+			if !ok {
+				t.Error("the middleware writer does not implement http.Flusher, want it forwarded")
+				return
+			}
+			f.Flush()
+		}))
+
+		under := httptest.NewRecorder()
+		handler.ServeHTTP(under, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil))
+
+		if !under.Flushed {
+			t.Error("Flush did not reach the wrapped writer")
+		}
+	})
+
+	t.Run("forwards Hijack when the wrapped writer supports it", func(t *testing.T) {
+		handler := RequestLogging(testLogger(&bytes.Buffer{}))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			h, ok := w.(http.Hijacker)
+			if !ok {
+				t.Error("the middleware writer does not implement http.Hijacker, want it advertised")
+				return
+			}
+			if _, _, err := h.Hijack(); err != nil {
+				t.Errorf("Hijack() = %v, want forwarded without error", err)
+			}
+		}))
+
+		under := &hijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
+		handler.ServeHTTP(under, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil))
+
+		if !under.hijacked {
+			t.Error("Hijack did not reach the wrapped writer")
+		}
+	})
+
+	t.Run("degrades Hijack to an error when the wrapped writer does not support it", func(t *testing.T) {
+		var handlerErr error
+		handler := RequestLogging(testLogger(&bytes.Buffer{}))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			h := w.(http.Hijacker) // the recorder advertises the interface...
+			_, _, handlerErr = h.Hijack()
+		}))
+
+		under := httptest.NewRecorder() // ...but the wrapped writer cannot hijack
+		handler.ServeHTTP(under, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/x", nil))
+
+		if handlerErr == nil {
+			t.Fatal("Hijack() = nil error, want an unsupported-operation error, not a silent no-op")
+		}
+	})
+}
+
+// hijackableRecorder implements http.Hijacker over a plain response recorder.
+type hijackableRecorder struct {
+	*httptest.ResponseRecorder
+	hijacked bool
+}
+
+func (h *hijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h.hijacked = true
+	return nil, nil, nil
 }
 
 // Integration through the full chain (docs/stack/backend-go.md): even a panic

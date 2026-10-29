@@ -61,7 +61,8 @@ un tick de 30 s que solo loguea heartbeat de ciclo, sin estado ni jobs. El
 motor real (ciclo diario, jobs en Postgres, outbox transaccional) tiene issue
 propio en el roadmap. El bucle vive en
 [`internal/platform/lifecycle`](internal/platform/lifecycle/) — compartido con
-la api — y sale limpio con SIGTERM/SIGINT.
+la api — y sale limpio con SIGTERM/SIGINT. Un segundo SIGTERM/SIGINT durante
+la ventana de shutdown fuerza la salida (exit 1): el apagado nunca cuelga.
 
 ## Layout
 

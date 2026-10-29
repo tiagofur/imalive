@@ -1,7 +1,10 @@
 package httpmw
 
 import (
+	"bufio"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 )
@@ -46,4 +49,28 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.status = status
 	r.wroteHeader = true
 	r.ResponseWriter.WriteHeader(status)
+}
+
+// Flush forwards to the wrapped writer when it supports flushing, so
+// streaming handlers (server-sent events) keep working behind the middleware
+// instead of silently losing the capability (JD ledger JD-5).
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// Hijack forwards connection takeover to the wrapped writer when it supports
+// it, so protocol upgrades keep working behind the middleware.
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("httpmw: wrapped ResponseWriter does not support Hijack")
+	}
+	return h.Hijack()
+}
+
+// Unwrap exposes the wrapped writer to http.ResponseController.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
 }
