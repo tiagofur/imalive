@@ -12,6 +12,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelPendingJobsByUserAndKind = `-- name: CancelPendingJobsByUserAndKind :execrows
+UPDATE escalation_jobs SET
+    state = 'cancelled',
+    locked_until = NULL,
+    updated_at = now()
+WHERE user_id = $1 AND kind = $2 AND state = 'pending'
+`
+
+type CancelPendingJobsByUserAndKindParams struct {
+	UserID uuid.UUID
+	Kind   string
+}
+
+// "No puedo": el rung del círculo ya no hace falta (la alerta sale ya) —
+// cancelar SOLO ese kind, sin tocar el resto de la escalera.
+func (q *Queries) CancelPendingJobsByUserAndKind(ctx context.Context, arg CancelPendingJobsByUserAndKindParams) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelPendingJobsByUserAndKind, arg.UserID, arg.Kind)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const circleNotifiedIncident = `-- name: CircleNotifiedIncident :execrows
 UPDATE incidents SET
     state = 'circle_notified',
@@ -119,6 +142,24 @@ func (q *Queries) CreateIncident(ctx context.Context, arg CreateIncidentParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const getContactByID = `-- name: GetContactByID :one
+SELECT id, display_name FROM contacts
+WHERE id = $1
+`
+
+type GetContactByIDRow struct {
+	ID          uuid.UUID
+	DisplayName string
+}
+
+// El nombre del reclamante para la alerta "X está yendo" (R-09).
+func (q *Queries) GetContactByID(ctx context.Context, id uuid.UUID) (GetContactByIDRow, error) {
+	row := q.db.QueryRow(ctx, getContactByID, id)
+	var i GetContactByIDRow
+	err := row.Scan(&i.ID, &i.DisplayName)
 	return i, err
 }
 

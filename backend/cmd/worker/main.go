@@ -53,7 +53,11 @@ func run() error {
 	}
 	defer pool.Close()
 
-	engine := escalation.New(pool, escalation.SystemClock{}, log)
+	// The signer stamps the web alert links (R-08) into incident payloads;
+	// the secret must match the api process (config, fail-fast).
+	engine := escalation.New(pool, escalation.SystemClock{}, log).WithAlertSigner(
+		escalation.NewAlertTokenSigner([]byte(cfg.AlertLinkSecret), cfg.PublicBaseURL,
+			escalation.SystemClock{}))
 
 	ticker := time.NewTicker(cycleInterval)
 	defer ticker.Stop()

@@ -61,3 +61,17 @@ WHERE id = $1
 -- nunca confirmó.
 SELECT max(checked_in_at)::timestamptz AS last_signal FROM checkins
 WHERE user_id = $1;
+
+-- name: GetContactByID :one
+-- El nombre del reclamante para la alerta "X está yendo" (R-09).
+SELECT id, display_name FROM contacts
+WHERE id = $1;
+
+-- name: CancelPendingJobsByUserAndKind :execrows
+-- "No puedo": el rung del círculo ya no hace falta (la alerta sale ya) —
+-- cancelar SOLO ese kind, sin tocar el resto de la escalera.
+UPDATE escalation_jobs SET
+    state = 'cancelled',
+    locked_until = NULL,
+    updated_at = now()
+WHERE user_id = $1 AND kind = $2 AND state = 'pending';

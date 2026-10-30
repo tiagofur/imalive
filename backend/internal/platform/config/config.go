@@ -4,6 +4,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"os"
@@ -57,6 +59,14 @@ type Config struct {
 	// OtpSecret keys the HMAC that hashes OTPs in Redis. Required whenever
 	// OtpSender is not "noop": without it, issued codes would be worthless.
 	OtpSecret string
+	// AlertLinkSecret keys the HMAC of the web alert links "Voy yo / No
+	// puedo" (R-08). Required in staging/production (a forgeable link would
+	// let anyone answer someone else's alert); in local an ephemeral random
+	// secret is generated per process.
+	AlertLinkSecret string
+	// PublicBaseURL is the origin the alert links point at (R-08). Empty in
+	// local dev: the payloads carry a relative path.
+	PublicBaseURL string
 }
 
 // Load builds the configuration from the process environment.
@@ -111,6 +121,20 @@ func FromEnv(getenv func(string) string, version string) (Config, error) {
 	cfg.TwilioAccountSid = strings.TrimSpace(getenv("TWILIO_ACCOUNT_SID"))
 	cfg.TwilioAuthToken = strings.TrimSpace(getenv("TWILIO_AUTH_TOKEN"))
 	cfg.TwilioVerifyServiceSid = strings.TrimSpace(getenv("TWILIO_VERIFY_SERVICE_SID"))
+
+	cfg.PublicBaseURL = strings.TrimRight(strings.TrimSpace(getenv("PUBLIC_BASE_URL")), "/")
+	alertSecret := strings.TrimSpace(getenv("ALERT_LINK_SECRET"))
+	if alertSecret == "" {
+		if cfg.Env != EnvLocal {
+			return Config{}, fmt.Errorf("config: ALERT_LINK_SECRET is required in %q (the alert links are signed capabilities, R-08)", cfg.Env)
+		}
+		buf := make([]byte, 32)
+		if _, err := rand.Read(buf); err != nil {
+			return Config{}, fmt.Errorf("config: ephemeral alert secret: %w", err)
+		}
+		alertSecret = base64.RawURLEncoding.EncodeToString(buf)
+	}
+	cfg.AlertLinkSecret = alertSecret
 
 	return cfg, nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/tiagofur/imalive/backend/internal/alert"
 	"github.com/tiagofur/imalive/backend/internal/auth"
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
 	"github.com/tiagofur/imalive/backend/internal/checkin"
@@ -97,10 +98,19 @@ func run() error {
 	circleHandlers := circle.NewHandlers(circlestore.New(pool), msgNotifier)
 	// The escalation engine (R-07) serves the life-signal and pause
 	// transactions of the handlers below; the worker runs its tick loop.
-	engine := escalation.New(pool, escalation.SystemClock{}, log)
+	// The signer stamps the web alert links (R-08) into incident payloads.
+	engine := escalation.New(pool, escalation.SystemClock{}, log).WithAlertSigner(
+		escalation.NewAlertTokenSigner([]byte(cfg.AlertLinkSecret), cfg.PublicBaseURL,
+			escalation.SystemClock{}))
 	profileHandlers := profile.NewHandlers(pool, authstore.New(pool), engine)
 	authMW := auth.NewMiddleware(authService)
 	checkinHandlers := checkin.NewHandlers(pool, checkinstore.New(pool), profileHandlers, engine)
+	// The web alert (R-08) is public by design: the signed link is the
+	// credential of the contact, no app and no account.
+	alertHandlers, err := alert.New(engine, []byte(cfg.AlertLinkSecret), log)
+	if err != nil {
+		return fmt.Errorf("alert templates: %w", err)
+	}
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", ":"+cfg.Port)
@@ -110,6 +120,7 @@ func run() error {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthz.New(cfg.Version))
+	alertHandlers.Register(mux)
 	authHandlers.Register(mux)
 	circleHandlers.Register(mux, authMW)
 	profileHandlers.Register(mux, authMW)

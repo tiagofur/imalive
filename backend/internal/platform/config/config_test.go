@@ -12,43 +12,55 @@ func getenv(m map[string]string) func(string) string {
 
 func TestFromEnv(t *testing.T) {
 	tests := []struct {
-		name    string
-		env     map[string]string
-		version string
-		want    Config
-		wantErr string
+		name                 string
+		env                  map[string]string
+		version              string
+		want                 Config
+		wantErr              string
+		ephemeralAlertSecret bool
 	}{
 		{
 			name: "valid full configuration",
 			env: map[string]string{
-				"APP_ENV":      "production",
-				"PORT":         "9000",
-				"LOG_LEVEL":    "debug",
-				"DATABASE_URL": "postgres://u:p@localhost:5432/imalive",
-				"REDIS_URL":    "redis://localhost:6379/0",
+				"APP_ENV":           "production",
+				"PORT":              "9000",
+				"LOG_LEVEL":         "debug",
+				"DATABASE_URL":      "postgres://u:p@localhost:5432/imalive",
+				"REDIS_URL":         "redis://localhost:6379/0",
+				"ALERT_LINK_SECRET": "alert-hmac-secret",
+				"PUBLIC_BASE_URL":   "https://tranqui.example/",
 			},
 			version: "v0.1.0",
 			want: Config{
-				Env:         EnvProduction,
-				Port:        "9000",
-				LogLevel:    slog.LevelDebug,
-				Version:     "v0.1.0",
-				DatabaseURL: "postgres://u:p@localhost:5432/imalive",
-				RedisURL:    "redis://localhost:6379/0",
-				OtpSender:   "noop",
+				Env:             EnvProduction,
+				Port:            "9000",
+				LogLevel:        slog.LevelDebug,
+				Version:         "v0.1.0",
+				DatabaseURL:     "postgres://u:p@localhost:5432/imalive",
+				RedisURL:        "redis://localhost:6379/0",
+				OtpSender:       "noop",
+				AlertLinkSecret: "alert-hmac-secret",
+				PublicBaseURL:   "https://tranqui.example",
 			},
 		},
 		{
-			name:    "defaults apply for optional variables",
-			env:     map[string]string{"APP_ENV": "local"},
-			version: "dev",
+			name:                 "defaults apply for optional variables",
+			env:                  map[string]string{"APP_ENV": "local"},
+			version:              "dev",
+			ephemeralAlertSecret: true,
 			want: Config{
-				Env:       EnvLocal,
-				Port:      DefaultPort,
-				LogLevel:  slog.LevelInfo,
-				Version:   "dev",
-				OtpSender: "noop",
+				Env:             EnvLocal,
+				Port:            DefaultPort,
+				LogLevel:        slog.LevelInfo,
+				Version:         "dev",
+				OtpSender:       "noop",
+				AlertLinkSecret: "ephemeral-placeholder",
 			},
+		},
+		{
+			name:    "staging without ALERT_LINK_SECRET fails fast",
+			env:     map[string]string{"APP_ENV": "staging"},
+			wantErr: "config: ALERT_LINK_SECRET is required in",
 		},
 		{
 			name:    "missing APP_ENV fails fast",
@@ -82,8 +94,8 @@ func TestFromEnv(t *testing.T) {
 		},
 		{
 			name: "warn level parses",
-			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "warn"},
-			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelWarn, Version: "", OtpSender: "noop"},
+			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "warn", "ALERT_LINK_SECRET": "test-alert-secret"},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelWarn, Version: "", OtpSender: "noop", AlertLinkSecret: "test-alert-secret"},
 		},
 		{
 			name:    "unknown OTP_SENDER fails fast",
@@ -92,20 +104,21 @@ func TestFromEnv(t *testing.T) {
 		},
 		{
 			name:    "OTP_SECRET required when a real sender is configured",
-			env:     map[string]string{"APP_ENV": "local", "OTP_SENDER": "sandbox"},
+			env:     map[string]string{"APP_ENV": "local", "OTP_SENDER": "sandbox", "ALERT_LINK_SECRET": "test-alert-secret"},
 			wantErr: "config: OTP_SECRET is required",
 		},
 		{
 			name: "sandbox sender with secret parses",
 			env: map[string]string{
 				"APP_ENV": "local", "OTP_SENDER": "sandbox", "OTP_SECRET": "dev-secret",
+				"ALERT_LINK_SECRET": "test-alert-secret",
 			},
-			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelInfo, Version: "", OtpSender: "sandbox", OtpSecret: "dev-secret"},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelInfo, Version: "", OtpSender: "sandbox", OtpSecret: "dev-secret", AlertLinkSecret: "test-alert-secret"},
 		},
 		{
 			name: "error level parses",
-			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "error"},
-			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelError, Version: "", OtpSender: "noop"},
+			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "error", "ALERT_LINK_SECRET": "test-alert-secret"},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelError, Version: "", OtpSender: "noop", AlertLinkSecret: "test-alert-secret"},
 		},
 		{
 			name:    "non numeric port fails fast",
@@ -122,6 +135,15 @@ func TestFromEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := FromEnv(getenv(tt.env), tt.version)
+			if tt.ephemeralAlertSecret {
+				if err != nil {
+					t.Fatalf("FromEnv() unexpected error: %v", err)
+				}
+				if got.AlertLinkSecret == "" {
+					t.Fatal("local without ALERT_LINK_SECRET must generate an ephemeral secret")
+				}
+				got.AlertLinkSecret = tt.want.AlertLinkSecret
+			}
 
 			if tt.wantErr != "" {
 				if err == nil {
