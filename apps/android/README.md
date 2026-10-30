@@ -26,4 +26,4 @@ gradle/libs.versions.toml                  # única fuente de versiones (bump = 
 
 ## Estado (F0)
 
-Scaffolding mínimo: `MainActivity` shell, Hilt configurado, gates de calidad en CI. La home "Estoy OK" y el consumo del backend llegan con el MVP (el contrato vive en [`/contracts`](../../contracts/openapi.yaml)).
+Scaffolding completo: home "Estoy OK" (botón 1 tap + estado estático, R-04) con test Compose bajo Robolectric, Hilt configurado, gates de calidad en CI. El consumo del backend (el botón hace POST /v1/checkins) llega con el MVP — el contrato vive en [`/contracts`](../../contracts/openapi.yaml).
