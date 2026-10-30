@@ -229,10 +229,10 @@ func (e *Engine) resolveNotifications(ctx context.Context, job store.EscalationJ
 		if err != nil {
 			return nil, fmt.Errorf("contacts: %w", err)
 		}
-		for _, c := range contacts {
-			if c.Position == 1 {
-				dests = []string{c.Phone}
-			}
+		// "Contacto 1" = the first remaining contact (lowest position): the
+		// circle CRUD does not renumber on delete, so position 1 may be gone.
+		if len(contacts) > 0 {
+			dests = []string{contacts[0].Phone}
 		}
 	case KindNotifyCircle:
 		contacts, err := e.store.ListContactsByUser(ctx, job.UserID)
