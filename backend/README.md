@@ -84,6 +84,7 @@ Validada al arranque, fail-fast ([`internal/platform/config`](internal/platform/
 | `REDIS_URL` | declarada¹ | — | Redis |
 | `OTP_SENDER` | `noop` | `noop` · `sandbox` · `twilio` | Entrega de códigos OTP (issue #39). `sandbox` escribe en un outbox fuera del repo |
 | `OTP_SECRET` | requerida si `OTP_SENDER` ≠ `noop` | — | Clave HMAC que hashea los OTP en Redis (nunca se guardan en claro) |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_VERIFY_SERVICE_SID` | solo `OTP_SENDER=twilio` | — | Credenciales de Twilio Verify (issue #6) |
 
 ¹ Se exigirán cuando exista su primer consumidor de datos. `VERSION` se inyecta
 con `-ldflags "-X main.version=..."`, nunca por entorno.

@@ -49,6 +49,11 @@ type Config struct {
 	// accepts everything), "sandbox" (writes to a local outbox file) or
 	// "twilio" (Verify API, credentials via TWILIO_* env, issue #6).
 	OtpSender string
+	// Twilio credentials for OtpSender=twilio (Verify API v2). Required only
+	// when the twilio sender is selected (fail-fast in the sender factory).
+	TwilioAccountSid       string
+	TwilioAuthToken        string
+	TwilioVerifyServiceSid string
 	// OtpSecret keys the HMAC that hashes OTPs in Redis. Required whenever
 	// OtpSender is not "noop": without it, issued codes would be worthless.
 	OtpSecret string
@@ -102,6 +107,10 @@ func FromEnv(getenv func(string) string, version string) (Config, error) {
 		return Config{}, fmt.Errorf("config: OTP_SECRET is required when OTP_SENDER is %q (codes are stored hashed)", sender)
 	}
 	cfg.OtpSecret = secret
+
+	cfg.TwilioAccountSid = strings.TrimSpace(getenv("TWILIO_ACCOUNT_SID"))
+	cfg.TwilioAuthToken = strings.TrimSpace(getenv("TWILIO_AUTH_TOKEN"))
+	cfg.TwilioVerifyServiceSid = strings.TrimSpace(getenv("TWILIO_VERIFY_SERVICE_SID"))
 
 	return cfg, nil
 }
