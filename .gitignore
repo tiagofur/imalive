@@ -25,3 +25,5 @@ dist/
 # Solo se versiona la config de equipo; la config local nunca.
 .impeccable/*
 !.impeccable/config.json
+.sandbox-outbox*
+backend/.sandbox-outbox*

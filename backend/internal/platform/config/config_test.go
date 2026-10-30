@@ -35,6 +35,7 @@ func TestFromEnv(t *testing.T) {
 				Version:     "v0.1.0",
 				DatabaseURL: "postgres://u:p@localhost:5432/imalive",
 				RedisURL:    "redis://localhost:6379/0",
+				OtpSender:   "noop",
 			},
 		},
 		{
@@ -42,10 +43,11 @@ func TestFromEnv(t *testing.T) {
 			env:     map[string]string{"APP_ENV": "local"},
 			version: "dev",
 			want: Config{
-				Env:      EnvLocal,
-				Port:     DefaultPort,
-				LogLevel: slog.LevelInfo,
-				Version:  "dev",
+				Env:       EnvLocal,
+				Port:      DefaultPort,
+				LogLevel:  slog.LevelInfo,
+				Version:   "dev",
+				OtpSender: "noop",
 			},
 		},
 		{
@@ -81,12 +83,29 @@ func TestFromEnv(t *testing.T) {
 		{
 			name: "warn level parses",
 			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "warn"},
-			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelWarn, Version: ""},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelWarn, Version: "", OtpSender: "noop"},
+		},
+		{
+			name:    "unknown OTP_SENDER fails fast",
+			env:     map[string]string{"APP_ENV": "local", "OTP_SENDER": "mail"},
+			wantErr: `config: OTP_SENDER "mail" is not one of`,
+		},
+		{
+			name:    "OTP_SECRET required when a real sender is configured",
+			env:     map[string]string{"APP_ENV": "local", "OTP_SENDER": "sandbox"},
+			wantErr: "config: OTP_SECRET is required",
+		},
+		{
+			name: "sandbox sender with secret parses",
+			env: map[string]string{
+				"APP_ENV": "local", "OTP_SENDER": "sandbox", "OTP_SECRET": "dev-secret",
+			},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelInfo, Version: "", OtpSender: "sandbox", OtpSecret: "dev-secret"},
 		},
 		{
 			name: "error level parses",
 			env:  map[string]string{"APP_ENV": "local", "LOG_LEVEL": "error"},
-			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelError, Version: ""},
+			want: Config{Env: EnvLocal, Port: DefaultPort, LogLevel: slog.LevelError, Version: "", OtpSender: "noop"},
 		},
 		{
 			name:    "non numeric port fails fast",
