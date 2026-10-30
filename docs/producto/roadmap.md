@@ -1,6 +1,6 @@
 # Roadmap
 
-> Última actualización: 2026-10-27. Las fases siguen `producto.md` §5; F0 es añadido de ingeniería (fábrica de software).
+> Última actualización: 2026-10-30. Las fases siguen `producto.md` §5; F0 es añadido de ingeniería (fábrica de software).
 
 ## F0 — Fundación de la fábrica (actual)
 
@@ -12,8 +12,8 @@ Objetivo: poder construir el MVP a máxima velocidad con agentes, sin deuda de f
 - [ ] Crear cuenta Twilio + **iniciar verificación Meta Business** (el trámite más lento — arrancar ya).
 - [ ] ADR-0006 (pendiente): hosting/infra (recomendación inicial: contenedores gestionados — Fly.io/Railway/ECS; decidir con datos de coste).
 - [ ] ADR-0007 (pendiente): facturación web/lifetime F4 (Stripe vs RevenueCat web).
-- [ ] Scaffolding: `/backend` (Go + docker-compose Postgres/Redis + CI), `/apps/android`, `/apps/ios`.
-- [ ] CI/CD base por stack ([procesos/ci-cd](../procesos/ci-cd.md)).
+- [x] Scaffolding: `/backend` (v0.1.0+v0.3.0), `/apps/android` (v0.4.0), `/apps/ios` (v0.5.0) — con home "Estoy OK" y tests en ambas apps.
+- [x] CI/CD base por stack ([procesos/ci-cd](../procesos/ci-cd.md)) — jobs gated por stack (backend/contracts/android/ios) + guardrails de fábrica.
 - [ ] Opcional (semana 0): smoke test del loop con bot de WhatsApp puro sobre 10 familias para medir check-in rate D7 y falsas alarmas sin app.
 
 ## Fase MVP (semanas 1–3)
