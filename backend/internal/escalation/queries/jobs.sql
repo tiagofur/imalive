@@ -112,3 +112,9 @@ SELECT id, display_name, phone, position
 FROM contacts
 WHERE user_id = $1
 ORDER BY position;
+
+-- name: GetUserForEscalation :one
+-- Datos mínimos del destinatario de los recordatorios y del payload (nombre
+-- de la persona que no confirmó). El teléfono es el destino WhatsApp (R-05/R-06).
+SELECT id, phone, display_name FROM users
+WHERE id = $1;

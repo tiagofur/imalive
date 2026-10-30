@@ -31,17 +31,23 @@ type Engine struct {
 	store *store.Queries
 	clock Clock
 	log   *slog.Logger
+	// resolve maps a claimed job to its outbox events. A field, not a
+	// hardwired call, so failure tests inject errors without real breakage.
+	resolve func(ctx context.Context, job store.EscalationJob) ([]store.InsertOutboxEventParams, error)
 }
 
 // New wires the engine over a pool and an injectable clock.
 func New(pool *pgxpool.Pool, clock Clock, log *slog.Logger) *Engine {
-	return &Engine{pool: pool, store: store.New(pool), clock: clock, log: log}
+	e := &Engine{pool: pool, store: store.New(pool), clock: clock, log: log}
+	e.resolve = e.resolveNotifications
+	return e
 }
 
 // ProcessTick runs one worker tick (cmd/worker, every 30 s): open due cycles,
-// then claim and execute due jobs (the #54 claim slice).
+// then claim and execute due jobs.
 func (e *Engine) ProcessTick(ctx context.Context) {
 	e.openDueCycles(ctx)
+	e.claimAndExecute(ctx)
 }
 
 // openDueCycles sweeps the users and opens the daily cycle of everyone whose
