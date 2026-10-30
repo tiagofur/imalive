@@ -34,3 +34,17 @@ type EscalationJob struct {
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 }
+
+type Incident struct {
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	CycleDate    pgtype.Date
+	State        string
+	ClaimedBy    pgtype.UUID
+	ClaimedAt    pgtype.Timestamptz
+	LastSignalAt pgtype.Timestamptz
+	OpenedAt     pgtype.Timestamptz
+	ClosedAt     pgtype.Timestamptz
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+}
