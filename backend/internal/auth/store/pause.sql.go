@@ -25,7 +25,9 @@ func (q *Queries) GetPauseUntil(ctx context.Context, id uuid.UUID) (pgtype.Times
 }
 
 const setUserPause = `-- name: SetUserPause :exec
-UPDATE users SET pause_until = $2, updated_at = now()
+UPDATE users SET pause_until = $2,
+                 pause_since = CASE WHEN $2::timestamptz IS NULL THEN NULL ELSE now() END,
+                 updated_at = now()
 WHERE id = $1
 `
 
@@ -34,6 +36,8 @@ type SetUserPauseParams struct {
 	PauseUntil pgtype.Timestamptz
 }
 
+// $2 NULL = cancelar: limpia también pause_since (la ventana de la racha,
+// R-12); $2 con valor = activar desde ahora.
 func (q *Queries) SetUserPause(ctx context.Context, arg SetUserPauseParams) error {
 	_, err := q.db.Exec(ctx, setUserPause, arg.ID, arg.PauseUntil)
 	return err

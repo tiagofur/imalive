@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-30 (issue #71, week 3)
+
+- Additive (R-12 racha): `UserProfile.streakDays` — consecutive local
+  check-in days, frozen by the pause window (days inside the pause neither
+  add nor break). No breaking changes (oasdiff clean).
+
 ## [0.4.0] — 2026-10-30 (issues #56 + #57, week 2)
 
 - Additive (R-10 SOS): `POST /v1/sos` (arms the 10 s server-side countdown,

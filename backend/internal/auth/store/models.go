@@ -20,4 +20,5 @@ type User struct {
 	UpdatedAt               pgtype.Timestamptz
 	PauseUntil              pgtype.Timestamptz
 	PushToken               *string
+	PauseSince              pgtype.Timestamptz
 }

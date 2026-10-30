@@ -14,6 +14,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/db/dbtest"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 	"github.com/tiagofur/imalive/backend/internal/profile"
+	profilestore "github.com/tiagofur/imalive/backend/internal/profile/store"
 )
 
 // api mounts the real stack (migrated Postgres + miniredis + auth + profile
@@ -47,7 +49,7 @@ func newAPI(t *testing.T) *api {
 		authstore.New(p.Pool), "test-secret")
 	authHandlers := auth.NewHandlers(svc, auth.NewRateLimiter(rdb))
 	engine := escalation.New(p.Pool, escalation.SystemClock{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	profileHandlers := profile.NewHandlers(p.Pool, authstore.New(p.Pool), engine)
+	profileHandlers := profile.NewHandlers(p.Pool, authstore.New(p.Pool), profilestore.New(p.Pool), engine)
 	authMW := auth.NewMiddleware(svc)
 
 	mux := http.NewServeMux()
@@ -131,6 +133,40 @@ func TestProfileFlow(t *testing.T) {
 		}
 		if body["checkinTime"] != "21:00" || body["escalationWindowMinutes"] != float64(60) {
 			t.Fatalf("profile defaults = %v, want 21:00 and 60", body)
+		}
+		if body["streakDays"] != float64(0) {
+			t.Fatalf("streak = %v, want 0 without check-ins", body["streakDays"])
+		}
+	})
+
+	t.Run("the streak counts the seeded check-in days (R-12)", func(t *testing.T) {
+		streakPhone := "+5215540440011"
+		streakToken := api.signUp(t, streakPhone)
+		var uid uuid.UUID
+		if err := api.pool.QueryRow(context.Background(),
+			`SELECT id FROM users WHERE phone = $1`, streakPhone).Scan(&uid); err != nil {
+			t.Fatalf("find user: %v", err)
+		}
+		nowUTC := time.Now().UTC()
+		for i := 1; i <= 3; i++ { // yesterday and two days before: streak alive
+			day := nowUTC.AddDate(0, 0, -i)
+			if _, err := api.pool.Exec(context.Background(),
+				`INSERT INTO checkins (id, user_id, cycle_date, checked_in_at)
+				 VALUES ($1, $2, $3, $4)`,
+				uuid.Must(uuid.NewV7()), uid,
+				pgtype.Date{Time: time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC), Valid: true},
+				pgtype.Timestamptz{Time: day, Valid: true}); err != nil {
+				t.Fatalf("seed checkin %d: %v", i, err)
+			}
+		}
+
+		resp := callAPI(t, http.MethodGet, srv.URL+"/v1/me", streakToken, nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+		body := decodeBody(t, resp)
+		if body["streakDays"] != float64(3) {
+			t.Fatalf("streak = %v, want 3 (today is still pending)", body["streakDays"])
 		}
 	})
 
@@ -220,6 +256,15 @@ func TestPauseFreezesLadder(t *testing.T) {
 		body := decodeBody(t, put)
 		t.Fatalf("pause = %d %v; want 204", put.StatusCode, body)
 	}
+	// The streak's freeze window is [pause_since, pause_until] (R-12).
+	var since, until *time.Time
+	if err := api.pool.QueryRow(context.Background(),
+		`SELECT pause_since, pause_until FROM users WHERE id = $1`, uid).Scan(&since, &until); err != nil {
+		t.Fatalf("read pause window: %v", err)
+	}
+	if since == nil || until == nil {
+		t.Fatalf("pause window after activation = since %v until %v, want both set", since, until)
+	}
 
 	var state string
 	if err := api.pool.QueryRow(context.Background(),
@@ -236,5 +281,17 @@ func TestPauseFreezesLadder(t *testing.T) {
 	}
 	if audits != 1 {
 		t.Fatalf("pause.activated audit rows = %d, want 1", audits)
+	}
+
+	// Cancelling clears the whole window: the streak counts normally again.
+	if del := callAPI(t, http.MethodDelete, api.server.URL+"/v1/me/pause", token, nil); del.StatusCode != http.StatusNoContent {
+		t.Fatalf("cancel = %d, want 204", del.StatusCode)
+	}
+	if err := api.pool.QueryRow(context.Background(),
+		`SELECT pause_since, pause_until FROM users WHERE id = $1`, uid).Scan(&since, &until); err != nil {
+		t.Fatalf("read window after cancel: %v", err)
+	}
+	if since != nil || until != nil {
+		t.Fatalf("window after cancel = since %v until %v, want both NULL", since, until)
 	}
 }
