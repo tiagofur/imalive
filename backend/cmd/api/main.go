@@ -15,6 +15,8 @@ import (
 
 	"github.com/tiagofur/imalive/backend/internal/auth"
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
+	"github.com/tiagofur/imalive/backend/internal/checkin"
+	checkinstore "github.com/tiagofur/imalive/backend/internal/checkin/store"
 	"github.com/tiagofur/imalive/backend/internal/circle"
 	circlestore "github.com/tiagofur/imalive/backend/internal/circle/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/config"
@@ -92,6 +94,7 @@ func run() error {
 		authstore.New(pool), cfg.OtpSecret)
 	authHandlers := auth.NewHandlers(authService, auth.NewRateLimiter(rdb))
 	circleHandlers := circle.NewHandlers(circlestore.New(pool), msgNotifier)
+	checkinHandlers := checkin.NewHandlers(checkinstore.New(pool))
 	profileHandlers := profile.NewHandlers(authstore.New(pool))
 	authMW := auth.NewMiddleware(authService)
 
@@ -106,6 +109,7 @@ func run() error {
 	authHandlers.Register(mux)
 	circleHandlers.Register(mux, authMW)
 	profileHandlers.Register(mux, authMW)
+	checkinHandlers.Register(mux, authMW)
 	// Chain order per docs/stack/backend-go.md, outermost first:
 	// request-id -> request-logging -> recovery. Request-logging wraps
 	// recovery so the per-request record carries the true 500 of a panic,
