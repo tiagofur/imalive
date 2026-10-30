@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
@@ -17,6 +20,7 @@ import (
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
 	"github.com/tiagofur/imalive/backend/internal/checkin"
 	"github.com/tiagofur/imalive/backend/internal/checkin/store"
+	"github.com/tiagofur/imalive/backend/internal/escalation"
 	"github.com/tiagofur/imalive/backend/internal/platform/db/dbtest"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 	"github.com/tiagofur/imalive/backend/internal/profile"
@@ -52,13 +56,22 @@ func newAPI(t *testing.T) *api {
 
 	svc := auth.NewService(otp.NewStore(rdb, "test-secret"), sender, rdb,
 		authstore.New(p.Pool), "test-secret")
+	// The real escalation engine serves the signal/pause transactions, exactly
+	// like cmd/api does (the invariant under test: check-in and pause cancel
+	// pending ladder jobs atomically).
+	engine := escalation.New(p.Pool, escalation.SystemClock{}, defaultLogger())
+	profileHandlers := profile.NewHandlers(p.Pool, authstore.New(p.Pool), engine)
 	mux := http.NewServeMux()
 	auth.NewHandlers(svc, auth.NewRateLimiter(rdb)).Register(mux)
-	profile.NewHandlers(authstore.New(p.Pool)).Register(mux, auth.NewMiddleware(svc))
-	checkin.NewHandlers(store.New(p.Pool), profile.NewHandlers(authstore.New(p.Pool))).Register(mux, auth.NewMiddleware(svc))
+	profileHandlers.Register(mux, auth.NewMiddleware(svc))
+	checkin.NewHandlers(p.Pool, store.New(p.Pool), profileHandlers, engine).Register(mux, auth.NewMiddleware(svc))
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return &api{server: srv, sender: sender, pool: p.Pool, svc: svc}
+}
+
+func defaultLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 func (a *api) signUp(t *testing.T, phone string) string {
@@ -216,6 +229,45 @@ func TestCheckinFlow(t *testing.T) {
 		resp := callAPI(t, http.MethodPost, api.server.URL+"/v1/checkins", "", nil, nil)
 		if resp.StatusCode != http.StatusUnauthorized {
 			t.Fatalf("status = %d, want 401", resp.StatusCode)
+		}
+	})
+
+	t.Run("the check-in cancels the pending ladder jobs in the same transaction", func(t *testing.T) {
+		ladderPhone := "+5215577660010"
+		ltoken := api.signUp(t, ladderPhone)
+		var uid uuid.UUID
+		if err := api.pool.QueryRow(context.Background(),
+			`SELECT id FROM users WHERE phone = $1`, ladderPhone).Scan(&uid); err != nil {
+			t.Fatalf("find user: %v", err)
+		}
+		jobID := uuid.Must(uuid.NewV7())
+		if _, err := api.pool.Exec(context.Background(),
+			`INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
+			 VALUES ($1, $2, CURRENT_DATE, 'reminder_soft', now())`, jobID, uid); err != nil {
+			t.Fatalf("seed job: %v", err)
+		}
+
+		resp := callAPI(t, http.MethodPost, api.server.URL+"/v1/checkins", ltoken, nil, nil)
+		if resp.StatusCode != http.StatusCreated {
+			body := decodeBody(t, resp)
+			t.Fatalf("check-in = %d %v; want 201", resp.StatusCode, body)
+		}
+
+		var state string
+		if err := api.pool.QueryRow(context.Background(),
+			`SELECT state FROM escalation_jobs WHERE id = $1`, jobID).Scan(&state); err != nil {
+			t.Fatalf("job state: %v", err)
+		}
+		if state != "cancelled" {
+			t.Fatalf("pending job state after the signal = %s, want cancelled (the ladder dies with the check-in)", state)
+		}
+		var audits int
+		if err := api.pool.QueryRow(context.Background(),
+			`SELECT count(*) FROM audit_events WHERE user_id = $1 AND kind = 'signal.received'`, uid).Scan(&audits); err != nil {
+			t.Fatalf("audit count: %v", err)
+		}
+		if audits != 1 {
+			t.Fatalf("signal.received audit rows = %d, want 1", audits)
 		}
 	})
 

@@ -5,6 +5,7 @@
 package profile
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,7 +13,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/tiagofur/imalive/backend/internal/auth"
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
@@ -21,12 +24,28 @@ import (
 
 // Handlers serve GET/PATCH /v1/me for the authenticated user.
 type Handlers struct {
-	users *authstore.Queries
+	pool    *pgxpool.Pool
+	users   *authstore.Queries
+	freezer LadderFreezer
 }
 
-// NewHandlers wires the handlers with the users store.
-func NewHandlers(users *authstore.Queries) *Handlers {
-	return &Handlers{users: users}
+// NewHandlers wires the handlers with the pool (the pause transaction), the
+// users store and the escalation engine's freezer.
+func NewHandlers(pool *pgxpool.Pool, users *authstore.Queries, freezer LadderFreezer) *Handlers {
+	return &Handlers{pool: pool, users: users, freezer: freezer}
+}
+
+// inTx runs fn in a transaction, rolling back on error.
+func inTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context, pgx.Tx) error) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := fn(ctx, tx); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // Register mounts the routes wrapped by the auth middleware: all protected.

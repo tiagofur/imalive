@@ -4,16 +4,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/tiagofur/imalive/backend/internal/auth"
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
+	"github.com/tiagofur/imalive/backend/internal/escalation"
 	"github.com/tiagofur/imalive/backend/internal/platform/db/dbtest"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 	"github.com/tiagofur/imalive/backend/internal/profile"
@@ -26,6 +32,7 @@ type api struct {
 	server *httptest.Server
 	sender *codeRecorder
 	svc    *auth.Service
+	pool   *pgxpool.Pool
 }
 
 func newAPI(t *testing.T) *api {
@@ -39,7 +46,8 @@ func newAPI(t *testing.T) *api {
 	svc := auth.NewService(otp.NewStore(rdb, "test-secret"), sender, rdb,
 		authstore.New(p.Pool), "test-secret")
 	authHandlers := auth.NewHandlers(svc, auth.NewRateLimiter(rdb))
-	profileHandlers := profile.NewHandlers(authstore.New(p.Pool))
+	engine := escalation.New(p.Pool, escalation.SystemClock{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	profileHandlers := profile.NewHandlers(p.Pool, authstore.New(p.Pool), engine)
 	authMW := auth.NewMiddleware(svc)
 
 	mux := http.NewServeMux()
@@ -47,7 +55,7 @@ func newAPI(t *testing.T) *api {
 	profileHandlers.Register(mux, authMW)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	return &api{server: srv, sender: sender, svc: svc}
+	return &api{server: srv, sender: sender, svc: svc, pool: p.Pool}
 }
 
 // signUp runs the full OTP flow for the phone and returns a bearer token.
@@ -184,4 +192,49 @@ func TestProfileFlow(t *testing.T) {
 			t.Fatalf("phone = %v, want the other user's own phone", body["phone"])
 		}
 	})
+}
+
+// TestPauseFreezesLadder exercises the R-11 invariant end to end: activating
+// the pause cancels the user's pending ladder jobs in the SAME transaction
+// (a pause without the freeze is impossible).
+func TestPauseFreezesLadder(t *testing.T) {
+	api := newAPI(t)
+	phone := "+5215540440010"
+	token := api.signUp(t, phone)
+
+	var uid uuid.UUID
+	if err := api.pool.QueryRow(context.Background(),
+		`SELECT id FROM users WHERE phone = $1`, phone).Scan(&uid); err != nil {
+		t.Fatalf("find user: %v", err)
+	}
+	jobID := uuid.Must(uuid.NewV7())
+	if _, err := api.pool.Exec(context.Background(),
+		`INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
+		 VALUES ($1, $2, CURRENT_DATE, 'notify_circle', now() + interval '2 hours')`, jobID, uid); err != nil {
+		t.Fatalf("seed job: %v", err)
+	}
+
+	put := callAPI(t, http.MethodPut, api.server.URL+"/v1/me/pause", token,
+		map[string]any{"until": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)})
+	if put.StatusCode != http.StatusNoContent {
+		body := decodeBody(t, put)
+		t.Fatalf("pause = %d %v; want 204", put.StatusCode, body)
+	}
+
+	var state string
+	if err := api.pool.QueryRow(context.Background(),
+		`SELECT state FROM escalation_jobs WHERE id = $1`, jobID).Scan(&state); err != nil {
+		t.Fatalf("job state: %v", err)
+	}
+	if state != "cancelled" {
+		t.Fatalf("pending job state after the pause = %s, want cancelled (the ladder freezes atomically, R-11)", state)
+	}
+	var audits int
+	if err := api.pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM audit_events WHERE user_id = $1 AND kind = 'pause.activated'`, uid).Scan(&audits); err != nil {
+		t.Fatalf("audit count: %v", err)
+	}
+	if audits != 1 {
+		t.Fatalf("pause.activated audit rows = %d, want 1", audits)
+	}
 }

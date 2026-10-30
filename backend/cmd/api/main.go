@@ -19,6 +19,7 @@ import (
 	checkinstore "github.com/tiagofur/imalive/backend/internal/checkin/store"
 	"github.com/tiagofur/imalive/backend/internal/circle"
 	circlestore "github.com/tiagofur/imalive/backend/internal/circle/store"
+	"github.com/tiagofur/imalive/backend/internal/escalation"
 	"github.com/tiagofur/imalive/backend/internal/platform/config"
 	"github.com/tiagofur/imalive/backend/internal/platform/db"
 	"github.com/tiagofur/imalive/backend/internal/platform/healthz"
@@ -94,9 +95,12 @@ func run() error {
 		authstore.New(pool), cfg.OtpSecret)
 	authHandlers := auth.NewHandlers(authService, auth.NewRateLimiter(rdb))
 	circleHandlers := circle.NewHandlers(circlestore.New(pool), msgNotifier)
-	profileHandlers := profile.NewHandlers(authstore.New(pool))
+	// The escalation engine (R-07) serves the life-signal and pause
+	// transactions of the handlers below; the worker runs its tick loop.
+	engine := escalation.New(pool, escalation.SystemClock{}, log)
+	profileHandlers := profile.NewHandlers(pool, authstore.New(pool), engine)
 	authMW := auth.NewMiddleware(authService)
-	checkinHandlers := checkin.NewHandlers(checkinstore.New(pool), profileHandlers)
+	checkinHandlers := checkin.NewHandlers(pool, checkinstore.New(pool), profileHandlers, engine)
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", ":"+cfg.Port)

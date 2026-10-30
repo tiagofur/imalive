@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	auth "github.com/tiagofur/imalive/backend/internal/auth"
 	"github.com/tiagofur/imalive/backend/internal/checkin/store"
@@ -27,16 +28,27 @@ type PauseReader interface {
 	PauseActive(ctx context.Context, userID uuid.UUID) (bool, time.Time)
 }
 
-// Handlers serve POST /v1/checkins and GET /v1/checkins/today.
-type Handlers struct {
-	checkins *store.Queries
-	pauses   PauseReader
+// LadderCanceler records the life signal in the escalation engine INSIDE the
+// caller's transaction: the pending ladder jobs are cancelled atomically with
+// the check-in (motor-escalada.md §Cola de trabajo). Implemented by the
+// escalation engine; nil only in tests without an engine — production wiring
+// always passes one.
+type LadderCanceler interface {
+	SignalReceivedTx(ctx context.Context, tx pgx.Tx, userID uuid.UUID, cycleDate pgtype.Date) error
 }
 
-// NewHandlers wires the check-in handlers with the sqlc store and the pause
-// reader (the escalation engine consults the same source in #54).
-func NewHandlers(checkins *store.Queries, pauses PauseReader) *Handlers {
-	return &Handlers{checkins: checkins, pauses: pauses}
+// Handlers serve POST /v1/checkins and GET /v1/checkins/today.
+type Handlers struct {
+	pool     *pgxpool.Pool
+	checkins *store.Queries
+	pauses   PauseReader
+	ladder   LadderCanceler
+}
+
+// NewHandlers wires the check-in handlers with the pool (the signal
+// transaction), the sqlc store, the pause reader and the escalation engine.
+func NewHandlers(pool *pgxpool.Pool, checkins *store.Queries, pauses PauseReader, ladder LadderCanceler) *Handlers {
+	return &Handlers{pool: pool, checkins: checkins, pauses: pauses, ladder: ladder}
 }
 
 // Register mounts the routes wrapped by the auth middleware (both protected).
@@ -77,9 +89,31 @@ func (h *Handlers) create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	created, err := h.checkins.CreateCheckin(r.Context(), store.CreateCheckinParams{
+	created, replayed, err := h.recordSignal(r.Context(), userID, cycleDate, now, key)
+	if err != nil {
+		internal(w, r, err)
+		return
+	}
+	_ = tz
+	writeJSON(w, replayStatus(replayed), checkinJSON(created, replayed))
+}
+
+// recordSignal persists the daily signal AND tells the escalation engine in
+// the same transaction: the check-in is a life signal, the pending ladder
+// jobs die with it (motor-escalada.md — never a confirmed user still
+// escalating). A unique violation (same-day or idempotency race) rolls back
+// and replays the existing row.
+func (h *Handlers) recordSignal(ctx context.Context, userID string, cycleDate pgtype.Date, now time.Time, key string) (store.Checkin, bool, error) {
+	uid := uuid.MustParse(userID)
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return store.Checkin{}, false, fmt.Errorf("checkin: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	created, err := h.checkins.WithTx(tx).CreateCheckin(ctx, store.CreateCheckinParams{
 		ID:             newUUID(),
-		UserID:         uuid.MustParse(userID),
+		UserID:         uid,
 		CycleDate:      cycleDate,
 		CheckedInAt:    pgTz(now),
 		IdempotencyKey: keyPtr(key),
@@ -89,21 +123,36 @@ func (h *Handlers) create(w http.ResponseWriter, r *http.Request) {
 		// Same-day replay (with or without a key) and idempotency races both
 		// surface as unique violations: answer with the existing signal.
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			existing, getErr := h.checkins.GetCheckinByDate(r.Context(), store.GetCheckinByDateParams{
-				UserID: uuid.MustParse(userID), CycleDate: cycleDate,
+			if rbErr := tx.Rollback(ctx); rbErr != nil {
+				return store.Checkin{}, false, fmt.Errorf("checkin: rollback: %w", rbErr)
+			}
+			existing, getErr := h.checkins.GetCheckinByDate(ctx, store.GetCheckinByDateParams{
+				UserID: uid, CycleDate: cycleDate,
 			})
 			if getErr != nil {
-				internal(w, r, getErr)
-				return
+				return store.Checkin{}, false, getErr
 			}
-			writeJSON(w, http.StatusOK, checkinJSON(existing, true))
-			return
+			return existing, true, nil
 		}
-		internal(w, r, err)
-		return
+		return store.Checkin{}, false, err
 	}
-	_ = tz
-	writeJSON(w, http.StatusCreated, checkinJSON(created, false))
+
+	if h.ladder != nil {
+		if err := h.ladder.SignalReceivedTx(ctx, tx, uid, cycleDate); err != nil {
+			return store.Checkin{}, false, fmt.Errorf("checkin: signal: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return store.Checkin{}, false, fmt.Errorf("checkin: commit: %w", err)
+	}
+	return created, false, nil
+}
+
+func replayStatus(replayed bool) int {
+	if replayed {
+		return http.StatusOK
+	}
+	return http.StatusCreated
 }
 
 func (h *Handlers) today(w http.ResponseWriter, r *http.Request) {
