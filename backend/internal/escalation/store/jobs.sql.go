@@ -193,6 +193,26 @@ func (q *Queries) FailJob(ctx context.Context, arg FailJobParams) error {
 	return err
 }
 
+const getUserForEscalation = `-- name: GetUserForEscalation :one
+SELECT id, phone, display_name FROM users
+WHERE id = $1
+`
+
+type GetUserForEscalationRow struct {
+	ID          uuid.UUID
+	Phone       string
+	DisplayName string
+}
+
+// Datos mínimos del destinatario de los recordatorios y del payload (nombre
+// de la persona que no confirmó). El teléfono es el destino WhatsApp (R-05/R-06).
+func (q *Queries) GetUserForEscalation(ctx context.Context, id uuid.UUID) (GetUserForEscalationRow, error) {
+	row := q.db.QueryRow(ctx, getUserForEscalation, id)
+	var i GetUserForEscalationRow
+	err := row.Scan(&i.ID, &i.Phone, &i.DisplayName)
+	return i, err
+}
+
 const getUserPauseUntil = `-- name: GetUserPauseUntil :one
 SELECT pause_until FROM users
 WHERE id = $1

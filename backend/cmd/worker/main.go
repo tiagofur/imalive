@@ -1,16 +1,18 @@
-// Command worker runs the imalive escalation engine skeleton: a placeholder
-// tick loop that only logs cycle heartbeats. No state, no jobs: the real
-// engine (daily cycle + jobs + outbox on PostgreSQL, ADR-0004) lands with the
-// escalation issue of the MVP.
+// Command worker runs the imalive escalation engine (R-07, ADR-0004): every
+// tick it opens due daily cycles and claims/executes due ladder jobs, writing
+// notifications to the transactional outbox. The outbox dispatcher (#57) is
+// the one that talks to Twilio/FCM — this process never sends anything.
 package main
 
 import (
-	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
 
+	"github.com/tiagofur/imalive/backend/internal/escalation"
 	"github.com/tiagofur/imalive/backend/internal/platform/config"
+	"github.com/tiagofur/imalive/backend/internal/platform/db"
 	"github.com/tiagofur/imalive/backend/internal/platform/lifecycle"
 	"github.com/tiagofur/imalive/backend/internal/platform/logging"
 )
@@ -18,7 +20,8 @@ import (
 // version is injected at build time: go build -ldflags "-X main.version=vX.Y.Z".
 var version = "dev"
 
-// cycleInterval is the placeholder tick of the engine loop.
+// cycleInterval is the engine tick (ADR-0004); the job delay SLO (p95 < 60 s)
+// assumes this granularity.
 const cycleInterval = 30 * time.Second
 
 func main() {
@@ -37,8 +40,20 @@ func run() error {
 	log := logging.New(os.Stdout, cfg.LogLevel)
 	slog.SetDefault(log)
 
+	if cfg.DatabaseURL == "" {
+		return fmt.Errorf("worker: DATABASE_URL is required (the engine is its state)")
+	}
+
 	ctx, stop := lifecycle.SignalContext()
 	defer stop()
+
+	pool, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	engine := escalation.New(pool, escalation.SystemClock{}, log)
 
 	ticker := time.NewTicker(cycleInterval)
 	defer ticker.Stop()
@@ -48,9 +63,7 @@ func run() error {
 		slog.String("version", version),
 		slog.Duration("cycle_interval", cycleInterval),
 	)
-	if err := lifecycle.Run(ctx, ticker.C, func(context.Context) {
-		log.Info("cycle heartbeat", slog.Duration("interval", cycleInterval))
-	}); err != nil {
+	if err := lifecycle.Run(ctx, ticker.C, engine.ProcessTick); err != nil {
 		return err
 	}
 	log.Info("worker stopped")
