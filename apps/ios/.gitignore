@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Xcode user state only: the generated project IS commited (project.yml is the
+# source of truth; see README.md)
+xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Swift Package Manager
+.build/
+.swiftpm/

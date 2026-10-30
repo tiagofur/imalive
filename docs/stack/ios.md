@@ -1,13 +1,24 @@
 # Estándares de iOS
 
-> Última actualización: 2026-10-27. ADR-0002 (nativo). Stack autorizado en [stack.md](stack.md).
+> Última actualización: 2026-10-29. ADR-0002 (nativo). Stack autorizado en [stack.md](stack.md).
+
+## Versiones (fijadas en el scaffolding F0)
+
+| Componente | Versión | Dónde se fija |
+|---|---|---|
+| Swift (language mode) | 6 (strict concurrency) | `SWIFT_VERSION` en `apps/ios/project.yml` |
+| Xcode (referencia local) | 27.1 (Build 27A9275) | `DEVELOPER_DIR` — ver README de `apps/ios` |
+| Xcode (CI, `macos-15`) | 26.3 | `DEVELOPER_DIR` del job `ios` (fallback documentado: 16.4, default de la imagen) |
+| Deployment target | iOS 17 | `apps/ios/project.yml` (cobertura LATAM por revisar antes del MVP; placeholder F0) |
+| Generación del proyecto | xcodegen 2.46.0 | `brew`; `xcodegen generate` (pbxproj commiteado) |
+| Lint | SwiftLint 0.65.1 · SwiftFormat 0.64.4 | `brew` (última estable; bump = PR normal) |
 
 ## Base técnica
 
 - **Swift 6** (strict concurrency activada por defecto) + **SwiftUI** + **Observation** (`@Observable`).
-- Deployment target: iOS 17+ (revisar cobertura en scaffolding).
+- Deployment target: iOS 17 (cobertura LATAM por revisar antes del MVP).
 - Gestión de dependencias: **Swift Package Manager** exclusivamente. Mínimo de dependencias externas (el SDK cubre casi todo).
-- Proyecto en `/apps/ios` (o paquete por feature con un app target fino):
+- Proyecto en `/apps/ios`, **generado con xcodegen** (`project.yml` = fuente de verdad; el `.xcodeproj` generado se comitea; ver fila en [stack.md](stack.md)) (o paquete por feature con un app target fino):
 
 ```
 /Tranqui

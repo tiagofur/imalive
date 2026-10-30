@@ -8,6 +8,10 @@ on:
 # Cada job se activa solo cuando existe el código de su stack (monorepo en F0).
 # La detección vive en un job aparte porque hashFiles() no está permitido en el
 # `if` de nivel de job: se calcula con shell y se expone como outputs.
+# El job `ios` añade filtro de archivos cambiados: los minutos de macOS se
+# facturan x10 en repos privados, así que solo corre si el PR/push toca
+# apps/ios/** o los workflows. Los demás stacks quedan con el gate por
+# existencia (ubuntu, barato).
 # Los comandos definitivos viven en cada Makefile/proyecto (ver AGENTS.md).
 jobs:
   detect:
@@ -18,14 +22,40 @@ jobs:
       android: ${{ steps.stacks.outputs.android }}
       ios: ${{ steps.stacks.outputs.ios }}
       contracts: ${{ steps.stacks.outputs.contracts }}
+      ios_changed: ${{ steps.changes.outputs.ios_changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # la detección de cambios compara contra la base
       - id: stacks
         run: |
           test -f backend/go.mod && echo "backend=true" >> "$GITHUB_OUTPUT" || echo "backend=false" >> "$GITHUB_OUTPUT"
           test -f apps/android/settings.gradle.kts && echo "android=true" >> "$GITHUB_OUTPUT" || echo "android=false" >> "$GITHUB_OUTPUT"
           ls apps/ios/*.xcodeproj/project.pbxproj >/dev/null 2>&1 && echo "ios=true" >> "$GITHUB_OUTPUT" || echo "ios=false" >> "$GITHUB_OUTPUT"
           test -f contracts/openapi.yaml && echo "contracts=true" >> "$GITHUB_OUTPUT" || echo "contracts=false" >> "$GITHUB_OUTPUT"
+      - id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          changed_all=false
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            changed="$(git diff --name-only "origin/$BASE_REF...$SHA")"
+          elif git cat-file -e "$BEFORE" 2>/dev/null; then
+            changed="$(git diff --name-only "$BEFORE" "$SHA")"
+          elif git rev-parse -q --verify "$SHA^" >/dev/null 2>&1; then
+            changed="$(git diff --name-only "$SHA^" "$SHA")"
+          else
+            changed=""
+            changed_all=true # primer commit: todo es nuevo
+          fi
+          ios_changed=false
+          if [ "$changed_all" = "true" ] || printf '%s\n' "$changed" | grep -qE '^(apps/ios/|\.github/workflows/)'; then
+            ios_changed=true
+          fi
+          echo "ios_changed=$ios_changed" >> "$GITHUB_OUTPUT"
 
   factory:
     name: Factory guardrails
@@ -98,11 +128,39 @@ jobs:
     name: iOS
     runs-on: macos-15
     needs: detect
-    if: needs.detect.outputs.ios == 'true'
+    if: needs.detect.outputs.ios == 'true' && needs.detect.outputs.ios_changed == 'true'
+    env:
+      # Xcode pinneado (imagen macos-15); fallback documentado: 16.4 (default).
+      # Bump = PR normal (docs/stack/ios.md).
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    defaults:
+      run:
+        working-directory: apps/ios
     steps:
       - uses: actions/checkout@v4
-      # TODO(scaffolding iOS): ajustar scheme/destination definitivos
-      - run: |
+      - name: Install tooling (xcodegen, SwiftLint, SwiftFormat)
+        run: brew install xcodegen swiftlint swiftformat
+      - name: Ensure an iPhone 16 simulator exists (image drift guard)
+        run: |
+          if ! xcrun simctl list devices | grep -q "iPhone 16 ("; then
+            xcrun simctl create "iPhone 16" \
+              com.apple.CoreSimulator.SimDeviceType.iPhone-16 \
+              com.apple.CoreSimulator.SimRuntime.iOS-26-2
+          fi
+          xcrun simctl list devices available | grep "iPhone 16 ("
+      - name: SwiftLint (strict)
+        run: swiftlint lint --strict --quiet
+      - name: SwiftFormat (lint)
+        run: swiftformat --lint .
+      - name: Verify the generated project matches project.yml (drift check)
+        run: |
+          xcodegen generate
+          git diff --exit-code
+      - name: Build
+        run: |
+          xcodebuild build -scheme Tranqui \
+            -destination 'platform=iOS Simulator,name=iPhone 16'
+      - name: Test
+        run: |
           xcodebuild test -scheme Tranqui \
             -destination 'platform=iOS Simulator,name=iPhone 16'
-        working-directory: apps/ios

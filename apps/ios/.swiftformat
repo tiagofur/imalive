@@ -1,0 +1,3 @@
+# SwiftFormat config for Tranqui (F0): default ruleset (docs/stack/ios.md).
+--swiftversion 6.0
+--exclude Tranqui.xcodeproj,.build

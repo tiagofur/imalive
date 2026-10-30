@@ -1,0 +1,5 @@
+# SwiftLint config for Tranqui (F0): default ruleset, strict in CI (docs/stack/ios.md).
+# Keep additions intentional; bump rules with a PR.
+excluded:
+  - Tranqui.xcodeproj
+  - .build
