@@ -13,7 +13,7 @@ import (
 )
 
 const getUser = `-- name: GetUser :one
-SELECT id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until FROM users
+SELECT id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until, push_token FROM users
 WHERE id = $1
 `
 
@@ -30,6 +30,7 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PauseUntil,
+		&i.PushToken,
 	)
 	return i, err
 }
@@ -42,7 +43,7 @@ UPDATE users SET
     timezone                  = COALESCE($4, timezone),
     updated_at                = now()
 WHERE id = $5
-RETURNING id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until
+RETURNING id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until, push_token
 `
 
 type UpdateUserProfileParams struct {
@@ -75,6 +76,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PauseUntil,
+		&i.PushToken,
 	)
 	return i, err
 }

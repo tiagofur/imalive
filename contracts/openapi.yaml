@@ -523,6 +523,56 @@ paths:
           description: Cancelled (or nothing was armed).
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /devices:
+    post:
+      operationId: registerDevice
+      description: >
+        Registers the FCM device token that receives the daily push
+        reminders (R-05 salida). Re-registering replaces the token (one
+        active device per user in the MVP); revoking stops the pushes.
+      tags: [profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  maxLength: 4096
+                  description: The FCM registration token.
+                  example: 'fGh:APA91bF...' 
+      responses:
+        '204':
+          description: Token registered (or replaced).
+        '400':
+          description: Missing or oversized token.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/validation-failed
+                title: Validation failed
+                status: 400
+                detail: token is required (max 4096 characters).
+                code: VALIDATION_FAILED
+                instance: /v1/devices
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: revokeDevice
+      description: >
+        Revokes the registered push token. Idempotent: without a token it
+        still answers 204.
+      tags: [profile]
+      responses:
+        '204':
+          description: Token cleared (or none was registered).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     bearerAuth:

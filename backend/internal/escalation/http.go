@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/tiagofur/imalive/backend/internal/auth"
+	"github.com/tiagofur/imalive/backend/internal/escalation/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/httpapi"
 )
 
@@ -58,6 +60,8 @@ func (h *Handlers) Register(mux *http.ServeMux, mw auth.Middleware) {
 	mux.Handle("GET /v1/incidents/current", mw.Wrap(http.HandlerFunc(h.current)))
 	mux.Handle("POST /v1/sos", mw.Wrap(http.HandlerFunc(h.armSos)))
 	mux.Handle("DELETE /v1/sos", mw.Wrap(http.HandlerFunc(h.cancelSos)))
+	mux.Handle("POST /v1/devices", mw.Wrap(http.HandlerFunc(h.registerDevice)))
+	mux.Handle("DELETE /v1/devices", mw.Wrap(http.HandlerFunc(h.revokeDevice)))
 }
 
 // currentIncidentJSON mirrors the contract schema IncidentCurrent (v0.3.0).
@@ -180,4 +184,50 @@ func (h *Handlers) cycleDate(ctx context.Context, userID uuid.UUID) (pgtype.Date
 	}
 	local := time.Now().In(loc)
 	return pgtype.Date{Time: local, Valid: true}, nil
+}
+
+// registerDevice answers POST /v1/devices: the FCM token of the user's
+// device for the daily push reminders (R-05 salida). Re-registering
+// replaces (one active device in the MVP).
+func (h *Handlers) registerDevice(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(auth.UserIDFromContext(r.Context()))
+	if err != nil {
+		httpapi.WriteProblem(w, r, http.StatusInternalServerError, httpapi.CodeInternal, "Internal server error.")
+		return
+	}
+	var body struct {
+		Token string `json:"token"`
+	}
+	if err := httpapi.DecodeJSON(r, &body); err != nil {
+		httpapi.WriteProblem(w, r, http.StatusBadRequest, httpapi.CodeValidationFailed, err.Error())
+		return
+	}
+	token := strings.TrimSpace(body.Token)
+	if token == "" || len(token) > 4096 {
+		httpapi.WriteProblem(w, r, http.StatusBadRequest, httpapi.CodeValidationFailed,
+			"token is required (max 4096 characters).")
+		return
+	}
+	if err := h.engine.store.SetUserPushToken(r.Context(), store.SetUserPushTokenParams{
+		ID: userID, PushToken: &token,
+	}); err != nil {
+		httpapi.WriteProblem(w, r, http.StatusInternalServerError, httpapi.CodeInternal, "Internal server error.")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// revokeDevice answers DELETE /v1/devices: clears the push token
+// (idempotent — revoking twice changes nothing).
+func (h *Handlers) revokeDevice(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(auth.UserIDFromContext(r.Context()))
+	if err != nil {
+		httpapi.WriteProblem(w, r, http.StatusInternalServerError, httpapi.CodeInternal, "Internal server error.")
+		return
+	}
+	if err := h.engine.store.ClearUserPushToken(r.Context(), userID); err != nil {
+		httpapi.WriteProblem(w, r, http.StatusInternalServerError, httpapi.CodeInternal, "Internal server error.")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
