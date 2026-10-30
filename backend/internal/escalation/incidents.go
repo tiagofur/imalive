@@ -35,12 +35,21 @@ const (
 	IncidentClosedFalseAlarm = "closed_false_alarm"
 )
 
-// openIncidentForJob creates the incident of the rung inside the caller's
+// openIncidentForJob opens the incident of the rung inside the caller's
 // transaction (the machine starts at Contacto1Notificado: the incident is
-// born with its first notification), freezing the last known life signal.
-// A race with an already-open incident reuses it: the partial unique index
-// rejects the second open and the loser keeps alerting the same incident.
+// born with its first notification), freezing the last known life signal. An
+// already-open incident is reused (an SOS during a live incident accelerates
+// it). In a race between workers the loser gets the partial-unique 23505 —
+// and a RETRY, because a failed insert aborts the transaction: the next
+// attempt sees the winner's incident and reuses it (at-least-once, ADR-0004).
 func openIncidentForJob(ctx context.Context, q *store.Queries, job store.EscalationJob) (store.Incident, error) {
+	open, err := q.GetOpenIncidentByUser(ctx, job.UserID)
+	switch {
+	case err == nil:
+		return open, nil
+	case !errors.Is(err, pgx.ErrNoRows):
+		return store.Incident{}, fmt.Errorf("open incident: %w", err)
+	}
 	lastSignal, err := q.GetLastSignalAt(ctx, job.UserID)
 	if err != nil {
 		return store.Incident{}, fmt.Errorf("last signal: %w", err)
@@ -49,18 +58,14 @@ func openIncidentForJob(ctx context.Context, q *store.Queries, job store.Escalat
 		ID: uuid.Must(uuid.NewV7()), UserID: job.UserID,
 		CycleDate: job.CycleDate, LastSignalAt: lastSignal,
 	})
-	if err == nil {
-		return inc, nil
-	}
-	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) || pgErr.Code != "23505" {
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return store.Incident{}, fmt.Errorf("incident race (retry reuses the winner): %w", err)
+		}
 		return store.Incident{}, fmt.Errorf("create incident: %w", err)
 	}
-	open, gerr := q.GetOpenIncidentByUser(ctx, job.UserID)
-	if gerr != nil {
-		return store.Incident{}, fmt.Errorf("reuse open incident: %w", gerr)
-	}
-	return open, nil
+	return inc, nil
 }
 
 // incidentAlertEvents builds the actionable alert events (R-08) for the given
@@ -476,4 +481,65 @@ func (e *Engine) buildView(ctx context.Context, q *store.Queries, inc store.Inci
 		}
 	}
 	return view, nil
+}
+
+// executeSosRung fires the SOS alert (R-10): the incident opens (or the live
+// one is reused — an SOS during an ongoing incident accelerates it) and goes
+// straight to circle_notified, alerting the WHOLE circle with claimable
+// links. The ladder's contact-first step is bypassed by design.
+func (e *Engine) executeSosRung(ctx context.Context, job store.EscalationJob) {
+	tx, err := e.pool.Begin(ctx)
+	if err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("begin: %w", err))
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := e.store.WithTx(tx)
+
+	inc, err := openIncidentForJob(ctx, q, job)
+	if err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), err)
+		return
+	}
+	if _, err := q.CircleNotifiedIncident(ctx, inc.ID); err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("transition: %w", err))
+		return
+	}
+	contacts, err := q.ListContactsByUser(ctx, job.UserID)
+	if err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("contacts: %w", err))
+		return
+	}
+	jobID := job.ID
+	events, err := e.incidentAlertEvents(ctx, q, job.UserID, &jobID, inc, contacts)
+	if err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), err)
+		return
+	}
+	destinations := make([]string, 0, len(events))
+	for _, ev := range events {
+		if err := q.InsertOutboxEvent(ctx, ev); err != nil {
+			e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("outbox insert: %w", err))
+			return
+		}
+		destinations = append(destinations, ev.Destination)
+	}
+	if err := insertAudit(ctx, q, auditParams{
+		UserID: job.UserID, CycleDate: inc.CycleDate, Kind: AuditIncidentCircleNotified,
+		JobID: &job.ID, IncidentID: &inc.ID,
+		Data: map[string]any{"reason": "sos", "destinations": destinations},
+	}); err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("audit: %w", err))
+		return
+	}
+	if err := q.CompleteJob(ctx, job.ID); err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("complete: %w", err))
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("commit: %w", err))
+		return
+	}
+	e.log.Info("escalation: sos alert sent",
+		slog.String("job_id", job.ID.String()), slog.Int("destinations", len(destinations)))
 }

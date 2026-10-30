@@ -53,9 +53,9 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(17)
-}
+// kotlin {
+//    jvmToolchain(17)
+// }
 
 detekt {
     buildUponDefaultConfig = true

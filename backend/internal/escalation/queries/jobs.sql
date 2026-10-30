@@ -10,7 +10,9 @@
 -- un ciclo 'done' jamás se re-notifica.
 INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
 VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (user_id, cycle_date, kind) DO UPDATE
+-- El predicado debe casar con el índice parcial (000007): el ladder es único
+-- por ciclo; sos_alert queda exento (un SOS puede repetirse el mismo día).
+ON CONFLICT (user_id, cycle_date, kind) WHERE kind <> 'sos_alert' DO UPDATE
 SET state = 'pending',
     run_at = EXCLUDED.run_at,
     attempts = 0,
@@ -118,3 +120,23 @@ ORDER BY position;
 -- de la persona que no confirmó). El teléfono es el destino WhatsApp (R-05/R-06).
 SELECT id, phone, display_name FROM users
 WHERE id = $1;
+
+-- name: GetPendingSosJob :one
+-- El armado es idempotente: un SOS ya en cuenta regresiva devuelve su run_at.
+SELECT * FROM escalation_jobs
+WHERE user_id = $1 AND kind = 'sos_alert' AND state = 'pending'
+ORDER BY run_at
+LIMIT 1;
+
+-- name: CreateSosJob :one
+INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
+VALUES ($1, $2, $3, 'sos_alert', $4)
+RETURNING *;
+
+-- name: CancelPendingSosJobs :execrows
+-- La cancelación dentro de la ventana: idempotente, auditada por el llamador.
+UPDATE escalation_jobs SET
+    state = 'cancelled',
+    locked_until = NULL,
+    updated_at = now()
+WHERE user_id = $1 AND kind = 'sos_alert' AND state = 'pending';

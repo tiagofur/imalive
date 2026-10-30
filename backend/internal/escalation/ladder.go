@@ -10,6 +10,9 @@ const (
 	KindReminderUrgent = "reminder_urgent" // "we are about to alert your circle"
 	KindNotifyContact  = "notify_contact"  // contact 1 (position 1)
 	KindNotifyCircle   = "notify_circle"   // the whole circle
+	// KindSosAlert is the R-10 manual emergency: it bypasses the ladder and
+	// lands in the circle after the 10 s server-side countdown (job run_at).
+	KindSosAlert = "sos_alert"
 )
 
 // Ladder offsets from the soft reminder, per the issue #54 ladder

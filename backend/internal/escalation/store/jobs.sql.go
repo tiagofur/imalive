@@ -43,6 +43,23 @@ func (q *Queries) CancelPendingJobsByUser(ctx context.Context, userID uuid.UUID)
 	return result.RowsAffected(), nil
 }
 
+const cancelPendingSosJobs = `-- name: CancelPendingSosJobs :execrows
+UPDATE escalation_jobs SET
+    state = 'cancelled',
+    locked_until = NULL,
+    updated_at = now()
+WHERE user_id = $1 AND kind = 'sos_alert' AND state = 'pending'
+`
+
+// La cancelación dentro de la ventana: idempotente, auditada por el llamador.
+func (q *Queries) CancelPendingSosJobs(ctx context.Context, userID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelPendingSosJobs, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const claimDueJobs = `-- name: ClaimDueJobs :many
 UPDATE escalation_jobs SET
     state = 'running',
@@ -134,7 +151,7 @@ const createLadderJob = `-- name: CreateLadderJob :exec
 
 INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
 VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (user_id, cycle_date, kind) DO UPDATE
+ON CONFLICT (user_id, cycle_date, kind) WHERE kind <> 'sos_alert' DO UPDATE
 SET state = 'pending',
     run_at = EXCLUDED.run_at,
     attempts = 0,
@@ -161,6 +178,8 @@ type CreateLadderJobParams struct {
 // la carrera entre workers inofensiva. Re-armar SOLO filas 'cancelled' (una
 // pausa canceló la escalera y al expirar se re-abre desde el punto natural);
 // un ciclo 'done' jamás se re-notifica.
+// El predicado debe casar con el índice parcial (000007): el ladder es único
+// por ciclo; sos_alert queda exento (un SOS puede repetirse el mismo día).
 func (q *Queries) CreateLadderJob(ctx context.Context, arg CreateLadderJobParams) error {
 	_, err := q.db.Exec(ctx, createLadderJob,
 		arg.ID,
@@ -170,6 +189,44 @@ func (q *Queries) CreateLadderJob(ctx context.Context, arg CreateLadderJobParams
 		arg.RunAt,
 	)
 	return err
+}
+
+const createSosJob = `-- name: CreateSosJob :one
+INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
+VALUES ($1, $2, $3, 'sos_alert', $4)
+RETURNING id, user_id, cycle_date, kind, run_at, state, attempts, max_attempts, locked_until, last_error, created_at, updated_at
+`
+
+type CreateSosJobParams struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	CycleDate pgtype.Date
+	RunAt     pgtype.Timestamptz
+}
+
+func (q *Queries) CreateSosJob(ctx context.Context, arg CreateSosJobParams) (EscalationJob, error) {
+	row := q.db.QueryRow(ctx, createSosJob,
+		arg.ID,
+		arg.UserID,
+		arg.CycleDate,
+		arg.RunAt,
+	)
+	var i EscalationJob
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CycleDate,
+		&i.Kind,
+		&i.RunAt,
+		&i.State,
+		&i.Attempts,
+		&i.MaxAttempts,
+		&i.LockedUntil,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const failJob = `-- name: FailJob :exec
@@ -191,6 +248,34 @@ type FailJobParams struct {
 func (q *Queries) FailJob(ctx context.Context, arg FailJobParams) error {
 	_, err := q.db.Exec(ctx, failJob, arg.ID, arg.LastError)
 	return err
+}
+
+const getPendingSosJob = `-- name: GetPendingSosJob :one
+SELECT id, user_id, cycle_date, kind, run_at, state, attempts, max_attempts, locked_until, last_error, created_at, updated_at FROM escalation_jobs
+WHERE user_id = $1 AND kind = 'sos_alert' AND state = 'pending'
+ORDER BY run_at
+LIMIT 1
+`
+
+// El armado es idempotente: un SOS ya en cuenta regresiva devuelve su run_at.
+func (q *Queries) GetPendingSosJob(ctx context.Context, userID uuid.UUID) (EscalationJob, error) {
+	row := q.db.QueryRow(ctx, getPendingSosJob, userID)
+	var i EscalationJob
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CycleDate,
+		&i.Kind,
+		&i.RunAt,
+		&i.State,
+		&i.Attempts,
+		&i.MaxAttempts,
+		&i.LockedUntil,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getUserForEscalation = `-- name: GetUserForEscalation :one

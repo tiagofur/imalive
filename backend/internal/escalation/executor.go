@@ -95,6 +95,9 @@ func (e *Engine) execute(ctx context.Context, job store.EscalationJob) {
 		// The incident rungs own their transaction (the incident state
 		// machine changes with them).
 		e.executeIncidentRung(ctx, job)
+	case KindSosAlert:
+		// The manual emergency: bypasses the ladder, straight to the circle.
+		e.executeSosRung(ctx, job)
 	default:
 		e.executeReminderRung(ctx, job, now)
 	}

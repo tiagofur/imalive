@@ -410,3 +410,184 @@ func lastEventFields(t *testing.T, p *dbtest.Pool, userID uuid.UUID) struct {
 
 // pgUUID converts a domain uuid to the store type from the black-box side.
 func pgUUID(u uuid.UUID) pgtype.UUID { return pgtype.UUID{Bytes: u, Valid: true} }
+
+// TestEngineSos drives the R-10 manual emergency: arm (10 s countdown) →
+// fire (straight to the circle) or cancel inside the window (nobody hears
+// anything), with the incident machine reused, not reinvented.
+func TestEngineSos(t *testing.T) {
+	ctx := context.Background()
+	p := dbtest.New(t)
+	loc, err := time.LoadLocation("America/Mexico_City")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	local := func(y int, mo time.Month, d, h, mi int) time.Time {
+		return time.Date(y, mo, d, h, mi, 0, 0, loc).UTC()
+	}
+	signalOf := func(userID uuid.UUID) store.Incident {
+		t.Helper()
+		var inc store.Incident
+		found := false
+		rows, err := p.Pool.Query(ctx,
+			`SELECT id, user_id, cycle_date, state, claimed_by, last_signal_at, opened_at, closed_at
+			 FROM incidents WHERE user_id = $1 ORDER BY opened_at DESC LIMIT 1`, userID)
+		if err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			if err := rows.Scan(&inc.ID, &inc.UserID, &inc.CycleDate, &inc.State,
+				&inc.ClaimedBy, &inc.LastSignalAt, &inc.OpenedAt, &inc.ClosedAt); err != nil {
+				t.Fatalf("scan incident: %v", err)
+			}
+			found = true
+		}
+		if !found {
+			t.Fatal("incident not found")
+		}
+		return inc
+	}
+	arm := func(engine *escalation.Engine, clock *fakeClock, userID uuid.UUID) time.Time {
+		t.Helper()
+		tx, err := p.Pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin: %v", err)
+		}
+		runAt, err := engine.SosArmTx(ctx, tx, userID,
+			pgDate(time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)), clock.now.Add(10*time.Second))
+		if err != nil {
+			_ = tx.Rollback(ctx)
+			t.Fatalf("SosArmTx: %v", err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatalf("commit: %v", err)
+		}
+		return runAt
+	}
+
+	t.Run("the SOS fires after the countdown straight to the circle", func(t *testing.T) {
+		userID := p.SeedUser("+5215595000001")
+		seedContact(t, p, userID, "María", "+5215595000011", 1)
+		seedContact(t, p, userID, "Beto", "+5215595000012", 2)
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx) // cycle open (the daily ladder is irrelevant here)
+
+		runAt := arm(engine, clock, userID)
+		if !runAt.Equal(clock.now.Add(10 * time.Second)) {
+			t.Fatalf("run_at = %v, want now+10s", runAt)
+		}
+		// Inside the window the job is not due yet.
+		clock.now = clock.now.Add(5 * time.Second)
+		engine.ProcessTick(ctx)
+		if n := outboxCount(t, p, userID); n != 0 {
+			t.Fatalf("outbox inside the countdown = %d events, want 0", n)
+		}
+
+		clock.now = local(2026, 10, 30, 21, 31)
+		engine.ProcessTick(ctx)
+
+		inc := signalOf(userID)
+		if inc.State != escalation.IncidentCircleNotified {
+			t.Fatalf("sos incident state = %s, want circle_notified (bypasses the ladder)", inc.State)
+		}
+		// Both contacts alerted with claimable links.
+		rows, err := p.Pool.Query(ctx,
+			`SELECT destination FROM outbox_event WHERE incident_id = $1 ORDER BY destination`, inc.ID)
+		if err != nil {
+			t.Fatalf("query alerts: %v", err)
+		}
+		defer rows.Close()
+		var dests []string
+		for rows.Next() {
+			var d string
+			if err := rows.Scan(&d); err != nil {
+				t.Fatalf("scan: %v", err)
+			}
+			dests = append(dests, d)
+		}
+		if len(dests) != 2 {
+			t.Fatalf("sos alerts = %d, want 2 (the whole circle)", len(dests))
+		}
+		if n := auditKindCount(t, p, userID, escalation.AuditSosArmed); n != 1 {
+			t.Fatalf("sos.armed audit rows = %d, want 1", n)
+		}
+	})
+
+	t.Run("the SOS cancelled inside the window notifies nobody", func(t *testing.T) {
+		userID := p.SeedUser("+5215595000002")
+		seedContact(t, p, userID, "María", "+5215595000021", 1)
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx)
+
+		if runAt := arm(engine, clock, userID); runAt.IsZero() {
+			t.Fatal("arm returned a zero run_at")
+		}
+		tx, err := p.Pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin: %v", err)
+		}
+		n, err := engine.SosCancelTx(ctx, tx, userID)
+		if err != nil || n != 1 {
+			_ = tx.Rollback(ctx)
+			t.Fatalf("SosCancelTx = %d (err %v), want 1/nil", n, err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatalf("commit: %v", err)
+		}
+
+		clock.now = local(2026, 10, 30, 21, 31)
+		engine.ProcessTick(ctx)
+
+		if n := outboxCount(t, p, userID); n != 0 {
+			t.Fatalf("outbox after cancel = %d events, want 0 (the window held)", n)
+		}
+		if n := auditKindCount(t, p, userID, escalation.AuditSosCancelled); n != 1 {
+			t.Fatalf("sos.cancelled audit rows = %d, want 1 (evidence either way)", n)
+		}
+		var incidents int
+		if err := p.Pool.QueryRow(ctx,
+			`SELECT count(*) FROM incidents WHERE user_id = $1`, userID).Scan(&incidents); err != nil || incidents != 0 {
+			t.Fatalf("incidents after cancel = %d (err %v), want 0 (nothing fired)", incidents, err)
+		}
+	})
+
+	t.Run("an SOS during a live incident reuses it and escalates", func(t *testing.T) {
+		userID := p.SeedUser("+5215595000003")
+		seedContact(t, p, userID, "María", "+5215595000031", 1)
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx)
+		// The daily ladder already opened an incident (contact rung fired).
+		clock.now = local(2026, 10, 31, 6, 0)
+		engine.ProcessTick(ctx)
+		before := signalOf(userID)
+		if before.State != escalation.IncidentContact1Notified {
+			t.Fatalf("seed incident state = %s, want contact1_notified", before.State)
+		}
+
+		arm(engine, clock, userID)
+		clock.now = local(2026, 10, 31, 6, 1)
+		engine.ProcessTick(ctx)
+
+		after := signalOf(userID)
+		if after.ID != before.ID {
+			t.Fatalf("sos created a second incident (%s), want the same %s", after.ID, before.ID)
+		}
+		if after.State != escalation.IncidentCircleNotified {
+			t.Fatalf("state after sos = %s, want circle_notified", after.State)
+		}
+	})
+
+	t.Run("a second SOS the same day is allowed", func(t *testing.T) {
+		userID := p.SeedUser("+5215595000004")
+		seedContact(t, p, userID, "María", "+5215595000041", 1)
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		arm(engine, clock, userID)
+		clock.now = local(2026, 10, 30, 21, 31)
+		engine.ProcessTick(ctx) // first SOS fires
+
+		arm2 := arm(engine, clock, userID) // second emergency the same day
+		if arm2.IsZero() {
+			t.Fatal("second SOS could not be armed (the partial unique must exempt sos_alert)")
+		}
+	})
+}
