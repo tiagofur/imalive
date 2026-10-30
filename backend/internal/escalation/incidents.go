@@ -438,19 +438,40 @@ type IncidentView struct {
 
 // View loads the alert page data for a verified token's incident.
 func (e *Engine) View(ctx context.Context, incidentID uuid.UUID) (IncidentView, error) {
-	q := e.store
-	inc, err := q.GetIncident(ctx, incidentID)
+	inc, err := e.store.GetIncident(ctx, incidentID)
 	if err != nil {
 		return IncidentView{}, fmt.Errorf("incident: %w", err)
 	}
+	return e.buildView(ctx, e.store, inc)
+}
+
+// CurrentIncident loads the user's most recent incident (contract
+// GET /v1/incidents/current): the live one while the machine works on it, or
+// the last closed one. found=false means the user has none at all (204).
+func (e *Engine) CurrentIncident(ctx context.Context, userID uuid.UUID) (IncidentView, bool, error) {
+	inc, err := e.store.GetCurrentIncidentForUser(ctx, userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return IncidentView{}, false, nil
+	}
+	if err != nil {
+		return IncidentView{}, false, fmt.Errorf("current incident: %w", err)
+	}
+	view, err := e.buildView(ctx, e.store, inc)
+	if err != nil {
+		return IncidentView{}, false, err
+	}
+	return view, true, nil
+}
+
+// buildView fills the read model (user name, claimant name) for an incident.
+func (e *Engine) buildView(ctx context.Context, q *store.Queries, inc store.Incident) (IncidentView, error) {
 	user, err := q.GetUserForEscalation(ctx, inc.UserID)
 	if err != nil {
 		return IncidentView{}, fmt.Errorf("user: %w", err)
 	}
 	view := IncidentView{Incident: inc, UserName: user.DisplayName}
 	if inc.ClaimedBy.Valid {
-		claimer, err := q.GetContactByID(ctx, uuid.UUID(inc.ClaimedBy.Bytes))
-		if err == nil {
+		if claimer, err := q.GetContactByID(ctx, uuid.UUID(inc.ClaimedBy.Bytes)); err == nil {
 			view.Claimer = claimer.DisplayName
 		}
 	}

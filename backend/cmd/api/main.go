@@ -105,6 +105,8 @@ func run() error {
 	profileHandlers := profile.NewHandlers(pool, authstore.New(pool), engine)
 	authMW := auth.NewMiddleware(authService)
 	checkinHandlers := checkin.NewHandlers(pool, checkinstore.New(pool), profileHandlers, engine)
+	// The user's app reads the incident state (contract v0.3.0).
+	incidentHandlers := escalation.NewHandlers(engine)
 	// The web alert (R-08) is public by design: the signed link is the
 	// credential of the contact, no app and no account.
 	alertHandlers, err := alert.New(engine, []byte(cfg.AlertLinkSecret), log)
@@ -125,6 +127,7 @@ func run() error {
 	circleHandlers.Register(mux, authMW)
 	profileHandlers.Register(mux, authMW)
 	checkinHandlers.Register(mux, authMW)
+	incidentHandlers.Register(mux, authMW)
 	// Chain order per docs/stack/backend-go.md, outermost first:
 	// request-id -> request-logging -> recovery. Request-logging wraps
 	// recovery so the per-request record carries the true 500 of a panic,

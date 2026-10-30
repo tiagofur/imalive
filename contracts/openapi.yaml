@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Tranqui API
-  version: 0.2.0
+  version: 0.3.0
   description: >
     Tranqui backend API (contract-first, ADR-0003). This contract is the
     negotiation point between backend, Android and iOS: endpoints are
@@ -24,6 +24,8 @@ tags:
     description: Trusted circle (1-5 contacts depending on plan).
   - name: profile
     description: Authenticated user profile and check-in preferences.
+  - name: incidents
+    description: The escalation incident lifecycle (R-09) as the user's app sees it.
 # Paths for week 1 (issue #2): auth + profile in P2, contacts + checkins in P3.
 paths:
   /contacts:
@@ -441,6 +443,33 @@ paths:
                 instance: /v1/me
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /incidents/current:
+    get:
+      operationId: getCurrentIncident
+      description: >
+        The user's most recent incident (R-08/R-09): the live one while the
+        escalation machine is on it, or the last closed one. The app shows
+        this on the home screen ("Alguien está revisando cómo estás") so a
+        user never discovers an incident after the fact.
+      tags: [incidents]
+      responses:
+        '200':
+          description: The current (or last) incident.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentCurrent'
+              example:
+                state: reclaimed
+                cycleDate: '2026-10-30'
+                openedAt: '2026-10-31T04:12:00Z'
+                closedAt: null
+                lastSeenAt: '2026-10-30T03:05:00Z'
+                claimedByName: María
+        '204':
+          description: No incident has ever been opened for the user.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     bearerAuth:
@@ -451,6 +480,39 @@ components:
         Short-lived access JWT (15 min). Only the auth endpoints are
         public (`security: []`); everything else requires this scheme.
   schemas:
+    IncidentCurrent:
+      type: object
+      description: >
+        The state of an escalation incident (R-09). States: contact1_notified
+        (contact 1 alerted), reclaimed (a contact answered "Voy yo"),
+        circle_notified (the whole circle was alerted), closed_resolved
+        (closed after a claim), closed_false_alarm (closed by the user's own
+        signal).
+      required: [state, cycleDate, openedAt]
+      properties:
+        state:
+          type: string
+          enum: [contact1_notified, reclaimed, circle_notified, closed_resolved, closed_false_alarm]
+        cycleDate:
+          type: string
+          format: date
+          description: The check-in cycle day the incident belongs to (user-local).
+        openedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: The last life signal known when the incident opened (R-08).
+        claimedByName:
+          type: string
+          nullable: true
+          description: Display name of the single claimant, if any.
     Problem:
       description: >
         RFC 9457 problem details with a stable business `code` consumed by

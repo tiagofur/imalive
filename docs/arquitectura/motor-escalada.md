@@ -37,17 +37,17 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> Contacto1Notificado: sin señal tras escalada
     Contacto1Notificado --> Reclamado: contacto pulsa "Voy yo" (web)
-    Contacto1Notificado --> CirculoNotificado: sin confirmación del contacto en 2h (o "No puedo")
-    Reclamado --> CerradoResuelto: confirmación de situación + cierre notificado al círculo
+    Contacto1Notificado --> CirculoNotificado: "No puedo" (o el rung del círculo)
+    Reclamado --> CerradoResuelto: señal de vida tardía del usuario + cierre notificado al círculo
     CirculoNotificado --> Reclamado: alguien del círculo reclama
-    CirculoNotificado --> CerradoResuelto: confirmación + cierre
+    CirculoNotificado --> CerradoResuelto: señal de vida tardía del usuario
     CerradoResuelto --> [*]
     Contacto1Notificado --> CerradoFalsaAlarma: señal de vida tardía del usuario
 ```
 
 - **Un solo reclamante**: el primer "Voy yo" reclama el incidente; al resto se les notifica ("María está yendo") y los botones cambian de estado. Nunca dos personas montan la misma alerta.
-- Toda alerta accionable incluye: quién no confirmó, desde cuándo, **última señal de vida conocida** y botones "Voy yo / No puedo" (link web firmado de un solo uso, R-08).
-- La señal de vida tardía del usuario **siempre** cierra el incidente como falsa alarma y notifica al círculo que todo está bien.
+- Toda alerta accionable incluye: quién no confirmó, desde cuándo, **última señal de vida conocida** y botones "Voy yo / No puedo" (link web firmado, R-08). Implementado en #55.
+- La señal de vida tardía del usuario **siempre** cierra el incidente y notifica al círculo que todo está bien: `CerradoFalsaAlarma` si nadie lo había reclamado, **`CerradoResuelto` si un contacto ya lo reclamó** (decisión #55: contar como falsa alarma un incidente que un contacto atendió inflaría el KPI de falsas alarmas con datos falsos). La confirmación explícita de situación del reclamante llega con el portal del cuidador (F2).
 
 ## Diseño técnico
 
