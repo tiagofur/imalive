@@ -1,0 +1,487 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		80F3733B352C7675E213100E /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E476971D3C9E0EAB49F55A /* SmokeTests.swift */; };
+		8B53C09A16165213C97516E4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692440EA8FA22B66747BCE05 /* ContentView.swift */; };
+		D22E62042BF881F20BFD35E6 /* LaunchSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6306A2BE9C1684BA9418BBF4 /* LaunchSmokeTests.swift */; };
+		E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5C943B16A0B544C4892340 /* TranquiApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		90E8CEE64D9B02A0BA089A88 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F51B3C02E6EBE0753A430919 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B18619CE484A2E0F83676C7D;
+			remoteInfo = Tranqui;
+		};
+		BBC53E6E520CCF462FFA2287 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F51B3C02E6EBE0753A430919 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B18619CE484A2E0F83676C7D;
+			remoteInfo = Tranqui;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0BB20B3348A5B04EF9882506 /* TranquiTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TranquiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		18E476971D3C9E0EAB49F55A /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
+		4845F5B919453845074D7BC3 /* Tranqui.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tranqui.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6306A2BE9C1684BA9418BBF4 /* LaunchSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSmokeTests.swift; sourceTree = "<group>"; };
+		692440EA8FA22B66747BCE05 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		7E5C943B16A0B544C4892340 /* TranquiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranquiApp.swift; sourceTree = "<group>"; };
+		CC2FB229F79C8E5B069C1190 /* TranquiUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TranquiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0281041CD70FF49AC790CCF2 /* Tranqui */ = {
+			isa = PBXGroup;
+			children = (
+				692440EA8FA22B66747BCE05 /* ContentView.swift */,
+				7E5C943B16A0B544C4892340 /* TranquiApp.swift */,
+			);
+			path = Tranqui;
+			sourceTree = "<group>";
+		};
+		30678FB06243C5D4650CA043 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4845F5B919453845074D7BC3 /* Tranqui.app */,
+				0BB20B3348A5B04EF9882506 /* TranquiTests.xctest */,
+				CC2FB229F79C8E5B069C1190 /* TranquiUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		62479D33C1ACC39C276DF619 = {
+			isa = PBXGroup;
+			children = (
+				7C540B5C80FE1F1EE2A6F0D8 /* Tests */,
+				0281041CD70FF49AC790CCF2 /* Tranqui */,
+				FDB2C44EE3E8397605B49829 /* UITests */,
+				30678FB06243C5D4650CA043 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7C540B5C80FE1F1EE2A6F0D8 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				18E476971D3C9E0EAB49F55A /* SmokeTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		FDB2C44EE3E8397605B49829 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				6306A2BE9C1684BA9418BBF4 /* LaunchSmokeTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		010DE5376409021322FC1893 /* TranquiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 60A6600D09BE4DA63742D317 /* Build configuration list for PBXNativeTarget "TranquiUITests" */;
+			buildPhases = (
+				07654A1A6FDB5EC1A4B6855F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D8EE583DC1A7AD89E5C99F15 /* PBXTargetDependency */,
+			);
+			name = TranquiUITests;
+			packageProductDependencies = (
+			);
+			productName = TranquiUITests;
+			productReference = CC2FB229F79C8E5B069C1190 /* TranquiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		B18619CE484A2E0F83676C7D /* Tranqui */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 16AEF2CBACC8B1DE2E1F4C9D /* Build configuration list for PBXNativeTarget "Tranqui" */;
+			buildPhases = (
+				5A1C8F014B46A61F442952DD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Tranqui;
+			packageProductDependencies = (
+			);
+			productName = Tranqui;
+			productReference = 4845F5B919453845074D7BC3 /* Tranqui.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C9D85C603F6F08EDD614F734 /* TranquiTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BE35002DD9F24986BF19AE4C /* Build configuration list for PBXNativeTarget "TranquiTests" */;
+			buildPhases = (
+				A29A42C545704F3A8333CC67 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3D6215F37A0264A162F39569 /* PBXTargetDependency */,
+			);
+			name = TranquiTests;
+			packageProductDependencies = (
+			);
+			productName = TranquiTests;
+			productReference = 0BB20B3348A5B04EF9882506 /* TranquiTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F51B3C02E6EBE0753A430919 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					010DE5376409021322FC1893 = {
+						TestTargetID = B18619CE484A2E0F83676C7D;
+					};
+				};
+			};
+			buildConfigurationList = CD75ECCB839368BE795836C7 /* Build configuration list for PBXProject "Tranqui" */;
+			developmentRegion = es;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				es,
+			);
+			mainGroup = 62479D33C1ACC39C276DF619;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 30678FB06243C5D4650CA043 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B18619CE484A2E0F83676C7D /* Tranqui */,
+				C9D85C603F6F08EDD614F734 /* TranquiTests */,
+				010DE5376409021322FC1893 /* TranquiUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		07654A1A6FDB5EC1A4B6855F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D22E62042BF881F20BFD35E6 /* LaunchSmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A1C8F014B46A61F442952DD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8B53C09A16165213C97516E4 /* ContentView.swift in Sources */,
+				E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A29A42C545704F3A8333CC67 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				80F3733B352C7675E213100E /* SmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3D6215F37A0264A162F39569 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B18619CE484A2E0F83676C7D /* Tranqui */;
+			targetProxy = 90E8CEE64D9B02A0BA089A88 /* PBXContainerItemProxy */;
+		};
+		D8EE583DC1A7AD89E5C99F15 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B18619CE484A2E0F83676C7D /* Tranqui */;
+			targetProxy = BBC53E6E520CCF462FFA2287 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		19402081ED48819C51855B47 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		1FCB0C01C6699539FB212497 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.imalive.TranquiTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tranqui.app/Tranqui";
+			};
+			name = Debug;
+		};
+		38B559C30B673605ADC0FFE2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.imalive.tranqui;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		47796EA08031CB9A84310998 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.imalive.TranquiTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tranqui.app/Tranqui";
+			};
+			name = Release;
+		};
+		6C1F2381C3960D3745138744 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		DA90E29D7335ADFC2F9050BC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.imalive.tranqui;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F0436F9A17AC1055D5B88D2C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.imalive.TranquiUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Tranqui;
+			};
+			name = Release;
+		};
+		F6503F35098C0A807093A0F7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.imalive.TranquiUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Tranqui;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		16AEF2CBACC8B1DE2E1F4C9D /* Build configuration list for PBXNativeTarget "Tranqui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA90E29D7335ADFC2F9050BC /* Debug */,
+				38B559C30B673605ADC0FFE2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		60A6600D09BE4DA63742D317 /* Build configuration list for PBXNativeTarget "TranquiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F6503F35098C0A807093A0F7 /* Debug */,
+				F0436F9A17AC1055D5B88D2C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BE35002DD9F24986BF19AE4C /* Build configuration list for PBXNativeTarget "TranquiTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FCB0C01C6699539FB212497 /* Debug */,
+				47796EA08031CB9A84310998 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CD75ECCB839368BE795836C7 /* Build configuration list for PBXProject "Tranqui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				19402081ED48819C51855B47 /* Debug */,
+				6C1F2381C3960D3745138744 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F51B3C02E6EBE0753A430919 /* Project object */;
+}
