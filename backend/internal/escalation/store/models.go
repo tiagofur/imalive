@@ -48,3 +48,18 @@ type Incident struct {
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 }
+
+type OutboxEvent struct {
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	Channel      string
+	Destination  string
+	Payload      []byte
+	JobID        pgtype.UUID
+	IncidentID   pgtype.UUID
+	State        string
+	Attempts     int16
+	LastError    *string
+	CreatedAt    pgtype.Timestamptz
+	DispatchedAt pgtype.Timestamptz
+}
