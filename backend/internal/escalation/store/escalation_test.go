@@ -31,7 +31,10 @@ func TestEscalationStore(t *testing.T) {
 	ctx := context.Background()
 	p := dbtest.New(t)
 	q := store.New(p.Pool)
-	now := time.Now().UTC()
+	// Fixed base instant: Postgres stores timestamptz at microsecond
+	// precision, so a wall-clock now (nanoseconds) flakily misses equality
+	// on the round-trip. Deterministic time keeps the assertions exact.
+	now := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
 
 	t.Run("opens the ladder idempotently and re-arms only cancelled jobs", func(t *testing.T) {
 		userID := p.SeedUser("+5215510000001")
