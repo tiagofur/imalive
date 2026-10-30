@@ -99,6 +99,18 @@ func (q *Queries) GetContact(ctx context.Context, arg GetContactParams) (Contact
 	return i, err
 }
 
+const getUserName = `-- name: GetUserName :one
+SELECT display_name FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUserName(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getUserName, id)
+	var display_name string
+	err := row.Scan(&display_name)
+	return display_name, err
+}
+
 const listContactsByUser = `-- name: ListContactsByUser :many
 SELECT id, user_id, display_name, phone, position, created_at FROM contacts
 WHERE user_id = $1

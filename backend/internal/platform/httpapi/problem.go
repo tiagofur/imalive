@@ -14,13 +14,15 @@ import (
 // The problem type URI derives from the code in kebab-case, e.g.
 // PHONE_INVALID -> https://api.tranqui.app/problems/phone-invalid.
 const (
-	CodePhoneInvalid     = "PHONE_INVALID"
-	CodeValidationFailed = "VALIDATION_FAILED"
-	CodeOtpInvalid       = "OTP_INVALID"
-	CodeOtpExpired       = "OTP_EXPIRED"
-	CodeUnauthorized     = "UNAUTHORIZED"
-	CodeRateLimited      = "RATE_LIMITED"
-	CodeInternal         = "INTERNAL"
+	CodePhoneInvalid        = "PHONE_INVALID"
+	CodeValidationFailed    = "VALIDATION_FAILED"
+	CodeOtpInvalid          = "OTP_INVALID"
+	CodeOtpExpired          = "OTP_EXPIRED"
+	CodeUnauthorized        = "UNAUTHORIZED"
+	CodeRateLimited         = "RATE_LIMITED"
+	CodeContactLimitReached = "CONTACT_LIMIT_REACHED"
+	CodeContactNotFound     = "CONTACT_NOT_FOUND"
+	CodeInternal            = "INTERNAL"
 )
 
 type problem struct {

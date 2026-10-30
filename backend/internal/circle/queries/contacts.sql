@@ -23,3 +23,7 @@ WHERE user_id = $1;
 -- name: NextContactPosition :one
 SELECT COALESCE(max(position), 0) + 1 AS next FROM contacts
 WHERE user_id = $1;
+
+-- name: GetUserName :one
+SELECT display_name FROM users
+WHERE id = $1;
