@@ -10,8 +10,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-// Criterion of issue #3 (triaged): a Compose test asserting the "Estoy OK"
-// button text, running inside testDebugUnitTest (Robolectric, no emulator).
+// Criteria of issues #3 and #72: the "Estoy OK" button, the next-checkin
+// status and the streak the user is protecting, running inside
+// testDebugUnitTest (Robolectric, no emulator).
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
 class HomeScreenTest {
@@ -31,5 +32,39 @@ class HomeScreenTest {
 
         composeRule.onNodeWithText("Estoy OK").assertIsDisplayed()
         composeRule.onNodeWithText("Siguiente check-in: hoy 21:00").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeShowsTheStreakTheUserIsProtecting() {
+        composeRule.setContent {
+            MaterialTheme {
+                HomeScreen(
+                    uiState = HomeUiState(nextCheckinLabel = "hoy 21:00", streakDays = 12),
+                    onCheckInClicked = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("12 días seguidos 🔥").assertIsDisplayed()
+    }
+
+    @Test
+    fun aFrozenStreakSaysSo() {
+        composeRule.setContent {
+            MaterialTheme {
+                HomeScreen(
+                    uiState =
+                        HomeUiState(
+                            nextCheckinLabel = "hoy 21:00",
+                            streakDays = 7,
+                            streakFrozen = true,
+                        ),
+                    onCheckInClicked = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("7 días seguidos 🔥").assertIsDisplayed()
+        composeRule.onNodeWithText("Pausa activa · racha congelada").assertIsDisplayed()
     }
 }

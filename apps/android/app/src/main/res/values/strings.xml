@@ -4,4 +4,6 @@
     <string name="app_name">Tranqui</string>
     <string name="checkin_button_ok">Estoy OK</string>
     <string name="home_next_checkin">Siguiente check-in: %1$s</string>
+    <string name="home_streak_days">%1$d días seguidos 🔥</string>
+    <string name="home_streak_frozen">Pausa activa · racha congelada</string>
 </resources>
