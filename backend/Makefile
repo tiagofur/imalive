@@ -13,7 +13,7 @@ GOFUMPT_VERSION := v0.12.0
 GOLANGCI_LINT := $(BIN)/golangci-lint
 GOFUMPT := $(BIN)/gofumpt
 
-.PHONY: lint fmt test run worker
+.PHONY: lint fmt test run worker migrate-up migrate-down migrate-version migrate-new
 
 lint: $(GOLANGCI_LINT) ## golangci-lint run (versión pinneada arriba)
 	$(GOLANGCI_LINT) run
@@ -32,6 +32,28 @@ run: ## docker compose up -d postgres redis && go run ./cmd/api
 worker: ## go run ./cmd/worker
 	set -a; [ -f .env ] && . ./.env; set +a; \
 	$(GO) run ./cmd/worker
+
+migrate-up: ## docker compose up -d postgres && go run ./cmd/migrate up
+	docker compose up -d postgres
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	$(GO) run ./cmd/migrate up
+
+migrate-down: ## roll back one migration (dev/CI only)
+	docker compose up -d postgres
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	$(GO) run ./cmd/migrate down
+
+migrate-version: ## show the current schema version
+	set -a; [ -f .env ] && . ./.env; set +a; \
+	$(GO) run ./cmd/migrate version
+
+migrate-new: ## create migrations/NNNNNN_NAME.{up,down}.sql (NAME=required)
+	@test -n "$(NAME)" || { echo "usage: make migrate-new NAME=add_feature"; exit 2; }
+	@next=$$(( $$( ls migrations/*.up.sql 2>/dev/null | sed 's/.*\/\([0-9]*\)_.*/\1/' | sort -n | tail -1 ) + 1 )); \
+	next=$$( printf '%06d' $$next ); \
+	printf -- '-- TODO: describe the change. PII mínima justificada aquí (producto.md §H).\n' > migrations/$${next}_$(NAME).up.sql; \
+	printf -- '-- (dev/CI only; see up header for the policy)\n' > migrations/$${next}_$(NAME).down.sql; \
+	echo "created migrations/$${next}_$(NAME).{up,down}.sql"
 
 $(GOLANGCI_LINT):
 	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
