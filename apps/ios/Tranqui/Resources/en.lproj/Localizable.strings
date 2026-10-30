@@ -1,0 +1,5 @@
+/* Copy structure for English (translations validated with #5's design system). */
+
+"checkin.cta" = "I'm OK";
+
+"home.next_checkin" = "Next check-in: %@";

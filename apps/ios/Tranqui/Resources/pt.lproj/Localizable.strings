@@ -1,0 +1,5 @@
+/* Copy structure for Portuguese (translations validated with #5's design system). */
+
+"checkin.cta" = "Estou bem";
+
+"home.next_checkin" = "Próximo check-in: %@";

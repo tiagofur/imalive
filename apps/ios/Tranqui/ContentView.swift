@@ -1,12 +1,8 @@
 import SwiftUI
 
-/// F0 placeholder root: proves the shell builds and launches. The second PR of
-/// the chain (issue #4) replaces this with the real home (HomeView).
+/// App root: the check-in home (the only screen in F0).
 struct ContentView: View {
     var body: some View {
-        NavigationStack {
-            Text("Tranqui")
-                .navigationTitle("Tranqui")
-        }
+        HomeView()
     }
 }

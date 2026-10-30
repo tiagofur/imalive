@@ -46,11 +46,12 @@ xcodebuild test -scheme Tranqui \
 ```
 project.yml               # fuente de verdad del proyecto (bump de versiones aquí)
 Tranqui.xcodeproj/        # generado por xcodegen, commiteado (incluye el scheme compartido)
-Tranqui/                  # app: una carpeta por feature bajo Features/ cuando crezca (checkin, circle, settings, sos)
+Tranqui/Features/         # una carpeta por feature (checkin, circle, settings, sos)
+Tranqui/Resources/        # Localizable.strings por idioma (es = desarrollo; en/pt)
 Tests/                    # Swift Testing (modelos y repos)
 UITests/                  # XCUITest de humo
 ```
 
 ## Estado (F0)
 
-Scaffolding completo: app mínima SwiftUI que compila y lanza en simulador (placeholder "Tranqui"), con target de tests (Swift Testing) y humo de lanzamiento (XCUITest), SwiftLint/SwiftFormat y job `ios` en CI con el gate completo. La home "Estoy OK" llega en la segunda PR de la cadena; el consumo del backend (POST /v1/checkins) con el MVP — el contrato vive en [`/contracts`](../../contracts/openapi.yaml).
+Scaffolding completo: home "Estoy OK" (botón 1 tap + estado estático, R-04) con copy externalizado (es/en/pt), Swift Testing + XCUITest y gates de calidad en CI. El consumo del backend (el botón hace POST /v1/checkins) llega con el MVP — el contrato vive en [`/contracts`](../../contracts/openapi.yaml).

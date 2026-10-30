@@ -1,0 +1,7 @@
+/* MVP copy in Spanish (development language, ux-movil: "tú", familiar tone). */
+
+/* Check-in CTA: the single home action (R-04). */
+"checkin.cta" = "Estoy OK";
+
+/* Home status line: next check-in time (static in F0). */
+"home.next_checkin" = "Siguiente check-in: %@";
