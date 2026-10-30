@@ -78,11 +78,32 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: imalive
+          POSTGRES_PASSWORD: imalive
+          POSTGRES_DB: imalive
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U imalive"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://imalive:imalive@localhost:5432/imalive?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: backend/go.mod
+      # Migrations cycle (issue #38): up -> down -> up -> version, mechanically
+      # verified on every PR (down is a dev/CI tool; prod is forward-only).
+      # CI runs the command directly: the service container replaces compose
+      # and DATABASE_URL comes from the job env (make migrate-* is the dev path).
+      - run: go run ./cmd/migrate up && go run ./cmd/migrate down && go run ./cmd/migrate up && go run ./cmd/migrate version
       - run: make lint
       - run: make test
 
