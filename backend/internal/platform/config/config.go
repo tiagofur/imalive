@@ -45,6 +45,13 @@ type Config struct {
 	DatabaseURL string
 	// RedisURL points at Redis (cache/ephemeral). Same policy as DatabaseURL.
 	RedisURL string
+	// OtpSender selects how one-time codes are delivered: "noop" (default,
+	// accepts everything), "sandbox" (writes to a local outbox file) or
+	// "twilio" (Verify API, credentials via TWILIO_* env, issue #6).
+	OtpSender string
+	// OtpSecret keys the HMAC that hashes OTPs in Redis. Required whenever
+	// OtpSender is not "noop": without it, issued codes would be worthless.
+	OtpSecret string
 }
 
 // Load builds the configuration from the process environment.
@@ -82,6 +89,19 @@ func FromEnv(getenv func(string) string, version string) (Config, error) {
 
 	cfg.DatabaseURL = strings.TrimSpace(getenv("DATABASE_URL"))
 	cfg.RedisURL = strings.TrimSpace(getenv("REDIS_URL"))
+
+	sender := optional(getenv, "OTP_SENDER", "noop")
+	switch sender {
+	case "noop", "sandbox", "twilio":
+		cfg.OtpSender = sender
+	default:
+		return Config{}, fmt.Errorf("config: OTP_SENDER %q is not one of noop, sandbox or twilio", sender)
+	}
+	secret := strings.TrimSpace(getenv("OTP_SECRET"))
+	if sender != "noop" && secret == "" {
+		return Config{}, fmt.Errorf("config: OTP_SECRET is required when OTP_SENDER is %q (codes are stored hashed)", sender)
+	}
+	cfg.OtpSecret = secret
 
 	return cfg, nil
 }

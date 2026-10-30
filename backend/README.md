@@ -82,6 +82,8 @@ Validada al arranque, fail-fast ([`internal/platform/config`](internal/platform/
 | `LOG_LEVEL` | no | `info` | `debug` · `info` · `warn` · `error` |
 | `DATABASE_URL` | declarada¹ | — | PostgreSQL ([ADR-0004](../docs/arquitectura/adr/ADR-0004-motor-escalada-postgres-outbox.md)) |
 | `REDIS_URL` | declarada¹ | — | Redis |
+| `OTP_SENDER` | `noop` | `noop` · `sandbox` · `twilio` | Entrega de códigos OTP (issue #39). `sandbox` escribe en un outbox fuera del repo |
+| `OTP_SECRET` | requerida si `OTP_SENDER` ≠ `noop` | — | Clave HMAC que hashea los OTP en Redis (nunca se guardan en claro) |
 
 ¹ Se exigirán cuando exista su primer consumidor de datos. `VERSION` se inyecta
 con `-ldflags "-X main.version=..."`, nunca por entorno.
