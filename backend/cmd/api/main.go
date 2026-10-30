@@ -1,6 +1,7 @@
-// Command api runs the imalive HTTP API: liveness at /healthz behind the
-// base middleware chain (request-id, recovery). Product endpoints arrive
-// with the OpenAPI contract (issue #2).
+// Command api runs the imalive HTTP API: liveness at /healthz plus the
+// product endpoints behind the base middleware chain (request-id, logging,
+// recovery) and the auth middleware for protected routes. The auth routes
+// (R-01, issue #39) arrive with the OpenAPI contract (issue #2).
 package main
 
 import (
@@ -10,12 +11,18 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/redis/go-redis/v9"
+
+	"github.com/tiagofur/imalive/backend/internal/auth"
+	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/config"
+	"github.com/tiagofur/imalive/backend/internal/platform/db"
 	"github.com/tiagofur/imalive/backend/internal/platform/healthz"
 	"github.com/tiagofur/imalive/backend/internal/platform/httpmw"
 	"github.com/tiagofur/imalive/backend/internal/platform/httpserver"
 	"github.com/tiagofur/imalive/backend/internal/platform/lifecycle"
 	"github.com/tiagofur/imalive/backend/internal/platform/logging"
+	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 )
 
 // version is injected at build time: go build -ldflags "-X main.version=vX.Y.Z".
@@ -37,10 +44,43 @@ func run() error {
 	log := logging.New(os.Stdout, cfg.LogLevel)
 	slog.SetDefault(log)
 
+	// The auth routes are the first data consumers: DatabaseURL and RedisURL
+	// become mandatory for this binary (the worker keeps its own policy).
+	if cfg.DatabaseURL == "" {
+		return fmt.Errorf("api: DATABASE_URL is required (auth persists users)")
+	}
+	if cfg.RedisURL == "" {
+		return fmt.Errorf("api: REDIS_URL is required (otp and sessions live in Redis)")
+	}
+
 	// Shared with the worker (lifecycle): graceful cancel on the first
 	// SIGINT/SIGTERM, force-exit if the operator sends a second one.
 	ctx, stop := lifecycle.SignalContext()
 	defer stop()
+
+	pool, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr(cfg.RedisURL)})
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		return fmt.Errorf("api: redis: %w", err)
+	}
+
+	sender, err := otp.NewFromConfig(cfg, otp.SenderConfig{
+		TwilioAccountSid:       cfg.TwilioAccountSid,
+		TwilioAuthToken:        cfg.TwilioAuthToken,
+		TwilioVerifyServiceSid: cfg.TwilioVerifyServiceSid,
+	})
+	if err != nil {
+		return err
+	}
+
+	authService := auth.NewService(otp.NewStore(rdb, cfg.OtpSecret), sender, rdb,
+		authstore.New(pool), cfg.OtpSecret)
+	authHandlers := auth.NewHandlers(authService, auth.NewRateLimiter(rdb))
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", ":"+cfg.Port)
@@ -50,10 +90,12 @@ func run() error {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthz.New(cfg.Version))
+	authHandlers.Register(mux)
 	// Chain order per docs/stack/backend-go.md, outermost first:
 	// request-id -> request-logging -> recovery. Request-logging wraps
 	// recovery so the per-request record carries the true 500 of a panic,
-	// and request-id runs outside so every log carries it.
+	// and request-id runs outside so every log carries it. The auth
+	// middleware guards protected routes inside the handlers (per-route).
 	handler := httpmw.RequestID(httpmw.RequestLogging(log)(httpmw.Recovery(log)(mux)))
 
 	log.Info("api listening",
@@ -66,4 +108,14 @@ func run() error {
 	}
 	log.Info("api stopped")
 	return nil
+}
+
+// redisAddr extracts host:port from a redis:// URL for the client options
+// (the platform keeps a single RedisURL config value).
+func redisAddr(url string) string {
+	const prefix = "redis://"
+	if len(url) > len(prefix) && url[:len(prefix)] == prefix {
+		return url[len(prefix):]
+	}
+	return url
 }

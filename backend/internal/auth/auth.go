@@ -100,8 +100,9 @@ func (s *Service) Request(ctx context.Context, phone string) error {
 
 // Tokens is the contract's Tokens schema payload.
 type Tokens struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
+	AccessToken      string `json:"accessToken"`
+	RefreshToken     string `json:"refreshToken"`
+	ExpiresInSeconds int    `json:"expiresInSeconds"`
 }
 
 // Verify consumes the OTP and returns a fresh token pair, creating the user
@@ -178,7 +179,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (Tokens, err
 	if err != nil {
 		return Tokens{}, err
 	}
-	return Tokens{AccessToken: access, RefreshToken: family + "." + next}, nil
+	return Tokens{AccessToken: access, RefreshToken: family + "." + next, ExpiresInSeconds: int(AccessTTL.Seconds())}, nil
 }
 
 // UserID validates an access JWT and returns the user id (sub). The
@@ -215,7 +216,7 @@ func (s *Service) startSession(ctx context.Context, userID string) (Tokens, erro
 	if err != nil {
 		return Tokens{}, err
 	}
-	return Tokens{AccessToken: access, RefreshToken: family + "." + secret}, nil
+	return Tokens{AccessToken: access, RefreshToken: family + "." + secret, ExpiresInSeconds: int(AccessTTL.Seconds())}, nil
 }
 
 func (s *Service) mintAccess(userID string) (string, error) {
