@@ -60,7 +60,7 @@ sqlc: ## regenerate the typed stores from the queries (version pinned above)
 	$(GO) run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate
 
 sqlc-verify: sqlc ## fail if the committed stores drifted from the queries
-	git diff --exit-code -- internal/circle/store internal/checkin/store internal/escalation/store
+	git diff --exit-code -- internal/circle/store internal/checkin/store internal/escalation/store internal/profile/store
 
 $(GOLANGCI_LINT):
 	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)

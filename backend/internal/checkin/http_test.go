@@ -24,6 +24,7 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/db/dbtest"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 	"github.com/tiagofur/imalive/backend/internal/profile"
+	profilestore "github.com/tiagofur/imalive/backend/internal/profile/store"
 )
 
 type codeRecorder struct{ codes map[string]string }
@@ -60,7 +61,7 @@ func newAPI(t *testing.T) *api {
 	// like cmd/api does (the invariant under test: check-in and pause cancel
 	// pending ladder jobs atomically).
 	engine := escalation.New(p.Pool, escalation.SystemClock{}, defaultLogger())
-	profileHandlers := profile.NewHandlers(p.Pool, authstore.New(p.Pool), engine)
+	profileHandlers := profile.NewHandlers(p.Pool, authstore.New(p.Pool), profilestore.New(p.Pool), engine)
 	mux := http.NewServeMux()
 	auth.NewHandlers(svc, auth.NewRateLimiter(rdb)).Register(mux)
 	profileHandlers.Register(mux, auth.NewMiddleware(svc))

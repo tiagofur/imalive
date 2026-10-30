@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Tranqui API
-  version: 0.4.0
+  version: 0.5.0
   description: >
     Tranqui backend API (contract-first, ADR-0003). This contract is the
     negotiation point between backend, Android and iOS: endpoints are
@@ -397,6 +397,7 @@ paths:
                 checkinTime: '21:00'
                 timezone: America/Mexico_City
                 escalationWindowMinutes: 60
+                streakDays: 12
         '401':
           $ref: '#/components/responses/Unauthorized'
     patch:
@@ -428,6 +429,7 @@ paths:
                 checkinTime: '22:00'
                 timezone: America/Mexico_City
                 escalationWindowMinutes: 90
+                streakDays: 12
         '400':
           description: Invalid field value.
           content:
@@ -704,13 +706,22 @@ components:
         Authenticated user profile (R-02). Minimum data: no email,
         address, notes or avatar. The full ladder is week 2.
       type: object
-      required: [id, name, phone, checkinTime, timezone, escalationWindowMinutes]
+      required: [id, name, phone, checkinTime, timezone, escalationWindowMinutes, streakDays]
       properties:
         id:
           type: string
           format: uuid
           description: User id (UUID v7).
           example: 01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f
+        streakDays:
+          type: integer
+          description: >
+            Consecutive local check-in days (R-12). The pause window freezes
+            it — days inside the pause neither add nor break; a missed day
+            outside the pause resets it to 0. Still alive when the latest
+            check-in is yesterday (today's slot may be at night).
+          minimum: 0
+          example: 12
         name:
           type: string
           description: Display name.

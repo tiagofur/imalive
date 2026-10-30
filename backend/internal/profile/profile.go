@@ -20,19 +20,21 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/auth"
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/httpapi"
+	profilestore "github.com/tiagofur/imalive/backend/internal/profile/store"
 )
 
 // Handlers serve GET/PATCH /v1/me for the authenticated user.
 type Handlers struct {
 	pool    *pgxpool.Pool
 	users   *authstore.Queries
+	streaks *profilestore.Queries
 	freezer LadderFreezer
 }
 
 // NewHandlers wires the handlers with the pool (the pause transaction), the
-// users store and the escalation engine's freezer.
-func NewHandlers(pool *pgxpool.Pool, users *authstore.Queries, freezer LadderFreezer) *Handlers {
-	return &Handlers{pool: pool, users: users, freezer: freezer}
+// users store, the streak store (R-12) and the escalation engine's freezer.
+func NewHandlers(pool *pgxpool.Pool, users *authstore.Queries, streaks *profilestore.Queries, freezer LadderFreezer) *Handlers {
+	return &Handlers{pool: pool, users: users, streaks: streaks, freezer: freezer}
 }
 
 // inTx runs fn in a transaction, rolling back on error.
@@ -68,12 +70,46 @@ type profilePatch struct {
 
 func (h *Handlers) get(w http.ResponseWriter, r *http.Request) {
 	userID := auth.UserIDFromContext(r.Context())
-	user, err := h.users.GetUser(r.Context(), uuid.MustParse(userID))
+	uid := uuid.MustParse(userID)
+	user, err := h.users.GetUser(r.Context(), uid)
 	if err != nil {
 		internal(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, profileOf(user))
+	body := profileOf(user)
+	// The streak (R-12) rides on /v1/me: the home screen renders it next to
+	// the check-in button. A read failure must not sink the profile: the
+	// streak is decoration, the identity is not.
+	if streak, err := h.streakFor(r.Context(), uid, user.Timezone); err == nil {
+		body["streakDays"] = streak
+	}
+	writeJSON(w, http.StatusOK, body)
+}
+
+// streakFor computes the streak over the persisted facts: recent check-in
+// cycle dates and the pause window, in the user's local days.
+func (h *Handlers) streakFor(ctx context.Context, userID uuid.UUID, timezone string) (int, error) {
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return 0, fmt.Errorf("streak: timezone %q: %w", timezone, err)
+	}
+	dates, err := h.streaks.ListRecentCheckinDates(ctx, profilestore.ListRecentCheckinDatesParams{
+		UserID: userID, Limit: streakLookback,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("streak: dates: %w", err)
+	}
+	window, err := h.streaks.GetPauseWindow(ctx, userID)
+	if err != nil {
+		return 0, fmt.Errorf("streak: pause window: %w", err)
+	}
+	local := time.Now().In(loc)
+	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	streakDates := make([]time.Time, 0, len(dates))
+	for _, d := range dates {
+		streakDates = append(streakDates, d.Time)
+	}
+	return CalculateStreak(streakDates, window.PauseSince, window.PauseUntil, today), nil
 }
 
 func (h *Handlers) patch(w http.ResponseWriter, r *http.Request) {

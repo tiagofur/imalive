@@ -31,6 +31,7 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/msg"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 	"github.com/tiagofur/imalive/backend/internal/profile"
+	profilestore "github.com/tiagofur/imalive/backend/internal/profile/store"
 )
 
 // version is injected at build time: go build -ldflags "-X main.version=vX.Y.Z".
@@ -102,7 +103,7 @@ func run() error {
 	engine := escalation.New(pool, escalation.SystemClock{}, log).WithAlertSigner(
 		escalation.NewAlertTokenSigner([]byte(cfg.AlertLinkSecret), cfg.PublicBaseURL,
 			escalation.SystemClock{}))
-	profileHandlers := profile.NewHandlers(pool, authstore.New(pool), engine)
+	profileHandlers := profile.NewHandlers(pool, authstore.New(pool), profilestore.New(pool), engine)
 	authMW := auth.NewMiddleware(authService)
 	checkinHandlers := checkin.NewHandlers(pool, checkinstore.New(pool), profileHandlers, engine)
 	// The user's app reads the incident state and arms the SOS (contract
