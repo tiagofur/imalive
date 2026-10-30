@@ -8,6 +8,17 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
+                if model.streakDays > 0 {
+                    VStack(spacing: 4) {
+                        Text(String(format: String(localized: "home.streak_days"), model.streakDays))
+                            .font(.title2.bold())
+                        if model.streakFrozen {
+                            Text(String(localized: "home.streak_frozen"))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 Text(nextCheckinText)
                     .font(.body)
                 Button(String(localized: "checkin.cta")) {

@@ -5,3 +5,9 @@
 
 /* Home status line: next check-in time (static in F0). */
 "home.next_checkin" = "Siguiente check-in: %@";
+
+/* Streak the user is protecting (R-12): shown next to the CTA. */
+"home.streak_days" = "%d días seguidos 🔥";
+
+/* Frozen while the pause mode is live (R-11: the value does not change). */
+"home.streak_frozen" = "Pausa activa · racha congelada";

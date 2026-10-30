@@ -11,6 +11,7 @@
 		8B53C09A16165213C97516E4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692440EA8FA22B66747BCE05 /* ContentView.swift */; };
 		8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF107937C3C937BA55CE000D /* HomeView.swift */; };
 		8FBECA54FA5BB20C437F25AC /* HomeSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF204D1AB0A521E67A331953 /* HomeSmokeTests.swift */; };
+		73AA0000000000000000A002 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73AA0000000000000000A001 /* ProfileRepository.swift */; };
 		BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F840AAEA2345DC777F1AB89F /* HomeModel.swift */; };
 		E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5C943B16A0B544C4892340 /* TranquiApp.swift */; };
 		FDA8771BC425D8CE5B09D1E4 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = EE2260895D085A2A6C908804 /* Localizable.strings */; };
@@ -45,6 +46,7 @@
 		CC2FB229F79C8E5B069C1190 /* TranquiUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TranquiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CF107937C3C937BA55CE000D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		DD206CA431C145F98478CCA3 /* HomeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModelTests.swift; sourceTree = "<group>"; };
+		73AA0000000000000000A001 /* ProfileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepository.swift; sourceTree = "<group>"; };
 		F840AAEA2345DC777F1AB89F /* HomeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -115,6 +117,7 @@
 		C02D255C407E53EAB0A91B30 /* CheckIn */ = {
 			isa = PBXGroup;
 			children = (
+				73AA0000000000000000A001 /* ProfileRepository.swift */,
 				F840AAEA2345DC777F1AB89F /* HomeModel.swift */,
 				CF107937C3C937BA55CE000D /* HomeView.swift */,
 			);
@@ -248,6 +251,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8B53C09A16165213C97516E4 /* ContentView.swift in Sources */,
+				73AA0000000000000000A002 /* ProfileRepository.swift in Sources */,
 				BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */,
 				8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */,
 				E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */,
