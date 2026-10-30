@@ -10,10 +10,11 @@ BIN := $(or $(shell $(GO) env GOBIN),$(shell $(GO) env GOPATH)/bin)
 
 GOLANGCI_LINT_VERSION := v2.15.0
 GOFUMPT_VERSION := v0.12.0
+SQLC_VERSION := v1.31.1
 GOLANGCI_LINT := $(BIN)/golangci-lint
 GOFUMPT := $(BIN)/gofumpt
 
-.PHONY: lint fmt test run worker migrate-up migrate-down migrate-version migrate-new
+.PHONY: lint fmt test run worker migrate-up migrate-down migrate-version migrate-new sqlc sqlc-verify
 
 lint: $(GOLANGCI_LINT) ## golangci-lint run (versión pinneada arriba)
 	$(GOLANGCI_LINT) run
@@ -54,6 +55,12 @@ migrate-new: ## create migrations/NNNNNN_NAME.{up,down}.sql (NAME=required)
 	printf -- '-- TODO: describe the change. PII mínima justificada aquí (producto.md §H).\n' > migrations/$${next}_$(NAME).up.sql; \
 	printf -- '-- (dev/CI only; see up header for the policy)\n' > migrations/$${next}_$(NAME).down.sql; \
 	echo "created migrations/$${next}_$(NAME).{up,down}.sql"
+
+sqlc: ## regenerate the typed stores from the queries (version pinned above)
+	$(GO) run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate
+
+sqlc-verify: sqlc ## fail if the committed stores drifted from the queries
+	git diff --exit-code -- internal/circle/store internal/checkin/store
 
 $(GOLANGCI_LINT):
 	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
