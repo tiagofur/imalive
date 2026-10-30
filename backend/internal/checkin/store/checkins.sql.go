@@ -93,3 +93,27 @@ func (q *Queries) GetCheckinByIdempotencyKey(ctx context.Context, arg GetCheckin
 	)
 	return i, err
 }
+
+const getUserCheckinTime = `-- name: GetUserCheckinTime :one
+SELECT checkin_time FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUserCheckinTime(ctx context.Context, id uuid.UUID) (pgtype.Time, error) {
+	row := q.db.QueryRow(ctx, getUserCheckinTime, id)
+	var checkin_time pgtype.Time
+	err := row.Scan(&checkin_time)
+	return checkin_time, err
+}
+
+const getUserTimezone = `-- name: GetUserTimezone :one
+SELECT timezone FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUserTimezone(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getUserTimezone, id)
+	var timezone string
+	err := row.Scan(&timezone)
+	return timezone, err
+}

@@ -10,3 +10,11 @@ WHERE user_id = $1 AND cycle_date = $2;
 -- name: GetCheckinByIdempotencyKey :one
 SELECT * FROM checkins
 WHERE user_id = $1 AND idempotency_key = $2;
+
+-- name: GetUserTimezone :one
+SELECT timezone FROM users
+WHERE id = $1;
+
+-- name: GetUserCheckinTime :one
+SELECT checkin_time FROM users
+WHERE id = $1;
