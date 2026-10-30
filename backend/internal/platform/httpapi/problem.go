@@ -22,6 +22,7 @@ const (
 	CodeRateLimited         = "RATE_LIMITED"
 	CodeContactLimitReached = "CONTACT_LIMIT_REACHED"
 	CodeContactNotFound     = "CONTACT_NOT_FOUND"
+	CodeSosPaused           = "SOS_PAUSED"
 	CodeInternal            = "INTERNAL"
 )
 

@@ -253,3 +253,16 @@ func (q *Queries) GetOpenIncidentByUser(ctx context.Context, userID uuid.UUID) (
 	)
 	return i, err
 }
+
+const getUserTimezone = `-- name: GetUserTimezone :one
+SELECT timezone FROM users
+WHERE id = $1
+`
+
+// Para computar el ciclo local del SOS (igual que el check-in).
+func (q *Queries) GetUserTimezone(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getUserTimezone, id)
+	var timezone string
+	err := row.Scan(&timezone)
+	return timezone, err
+}

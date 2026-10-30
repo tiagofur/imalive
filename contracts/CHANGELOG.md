@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-30 (issues #56 + #57, week 2)
+
+- Additive (R-10 SOS): `POST /v1/sos` (arms the 10 s server-side countdown,
+  `409 SOS_PAUSED` while the pause holds) and `DELETE /v1/sos` (idempotent
+  cancel inside the window). `POST /v1/devices` + `DELETE /v1/devices`
+  (register/revoke the FCM push token, R-05 salida). No breaking changes
+  (oasdiff clean).
+
 ## [0.3.0] — 2026-10-30 (issue #55, week 2)
 
 - Additive (R-08/R-09 incidente + alerta web): `GET /v1/incidents/current`

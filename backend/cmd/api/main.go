@@ -105,8 +105,9 @@ func run() error {
 	profileHandlers := profile.NewHandlers(pool, authstore.New(pool), engine)
 	authMW := auth.NewMiddleware(authService)
 	checkinHandlers := checkin.NewHandlers(pool, checkinstore.New(pool), profileHandlers, engine)
-	// The user's app reads the incident state (contract v0.3.0).
-	incidentHandlers := escalation.NewHandlers(engine)
+	// The user's app reads the incident state and arms the SOS (contract
+	// v0.4.0); the pause reader is the same source the profile consults.
+	incidentHandlers := escalation.NewHandlers(engine, profileHandlers)
 	// The web alert (R-08) is public by design: the signed link is the
 	// credential of the contact, no app and no account.
 	alertHandlers, err := alert.New(engine, []byte(cfg.AlertLinkSecret), log)
