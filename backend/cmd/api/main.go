@@ -94,9 +94,9 @@ func run() error {
 		authstore.New(pool), cfg.OtpSecret)
 	authHandlers := auth.NewHandlers(authService, auth.NewRateLimiter(rdb))
 	circleHandlers := circle.NewHandlers(circlestore.New(pool), msgNotifier)
-	checkinHandlers := checkin.NewHandlers(checkinstore.New(pool))
 	profileHandlers := profile.NewHandlers(authstore.New(pool))
 	authMW := auth.NewMiddleware(authService)
+	checkinHandlers := checkin.NewHandlers(checkinstore.New(pool), profileHandlers)
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", ":"+cfg.Port)

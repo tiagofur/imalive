@@ -18,4 +18,5 @@ type User struct {
 	EscalationWindowMinutes int16
 	CreatedAt               pgtype.Timestamptz
 	UpdatedAt               pgtype.Timestamptz
+	PauseUntil              pgtype.Timestamptz
 }

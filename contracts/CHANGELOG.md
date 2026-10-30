@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-10-30 (issue #53, week 2)
+
+- Additive (R-11 pause/viaje): `PUT /v1/me/pause` (freeze the ladder until
+  an instant), `DELETE /v1/me/pause` (resume), `UserProfile.pauseUntil`
+  (nullable). No breaking changes (oasdiff clean).
+
 ## [0.1.0] — 2026-10-28 (issue #2, week 1)
 
 - Auth: `POST /v1/auth/otp/request` (204, `429` + `Retry-After`),
