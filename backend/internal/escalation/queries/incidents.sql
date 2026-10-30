@@ -75,3 +75,8 @@ UPDATE escalation_jobs SET
     locked_until = NULL,
     updated_at = now()
 WHERE user_id = $1 AND kind = $2 AND state = 'pending';
+
+-- name: GetUserTimezone :one
+-- Para computar el ciclo local del SOS (igual que el check-in).
+SELECT timezone FROM users
+WHERE id = $1;

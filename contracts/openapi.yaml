@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Tranqui API
-  version: 0.3.0
+  version: 0.4.0
   description: >
     Tranqui backend API (contract-first, ADR-0003). This contract is the
     negotiation point between backend, Android and iOS: endpoints are
@@ -468,6 +468,59 @@ paths:
                 claimedByName: María
         '204':
           description: No incident has ever been opened for the user.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /sos:
+    post:
+      operationId: armSos
+      description: >
+        Arms the SOS (R-10): after a 10-second server-side countdown the
+        alert reaches the WHOLE circle with "Voy yo / No puedo" links
+        (bypasses the daily ladder). The response carries the instant the
+        alert becomes due; `DELETE /v1/sos` inside the window cancels it.
+        Refused with `SOS_PAUSED` while the pause mode is live (R-11 holds,
+        with an explicit message).
+      tags: [incidents]
+      responses:
+        '201':
+          description: The countdown is armed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runAt]
+                properties:
+                  runAt:
+                    type: string
+                    format: date-time
+                    description: When the alert becomes due (now+10s; the worker tick may land it up to one tick later).
+                example:
+                  runAt: '2026-10-31T03:41:10Z'
+        '409':
+          description: The pause mode is live (R-11) — SOS refused with an explicit message.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/sos-paused
+                title: SOS refused
+                status: 409
+                detail: 'El modo pausa está activo: el SOS no enviará alertas. Cancela la pausa primero si es una emergencia real.'
+                code: SOS_PAUSED
+                instance: /v1/sos
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: cancelSos
+      description: >
+        Cancels the armed SOS inside the countdown window (R-10).
+        Idempotent: without an armed SOS it still answers 204, and the
+        arm/cancel are both audited.
+      tags: [incidents]
+      responses:
+        '204':
+          description: Cancelled (or nothing was armed).
         '401':
           $ref: '#/components/responses/Unauthorized'
 components:
