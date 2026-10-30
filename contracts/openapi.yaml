@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Tranqui API
-  version: 0.1.0
+  version: 0.2.0
   description: >
     Tranqui backend API (contract-first, ADR-0003). This contract is the
     negotiation point between backend, Android and iOS: endpoints are
@@ -202,6 +202,55 @@ paths:
                 status: pending
                 checkedInAt: null
                 nextCheckinAt: '2026-10-29T03:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/pause:
+    put:
+      operationId: pauseEscalation
+      description: >
+        Activates the pause/viaje mode (R-11): the escalation ladder is
+        frozen until the given instant; today's status becomes `paused`
+        and the streak freezes instead of breaking. Auto-resumes at the
+        instant (server-side).
+      tags: [profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [until]
+              properties:
+                until:
+                  type: string
+                  format: date-time
+                  description: Pause end (RFC 3339); must be in the future.
+                  example: '2026-11-15T06:00:00Z'
+      responses:
+        '204':
+          description: Pause active until the given instant.
+        '400':
+          description: Invalid instant.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://api.tranqui.app/problems/validation-failed
+                title: Validation failed
+                status: 400
+                detail: until must be an RFC 3339 instant in the future.
+                code: VALIDATION_FAILED
+                instance: /v1/me/pause
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: resumeEscalation
+      description: Cancels the active pause; the ladder resumes immediately.
+      tags: [profile]
+      responses:
+        '204':
+          description: Pause cancelled.
         '401':
           $ref: '#/components/responses/Unauthorized'
   /auth/otp/request:
@@ -521,6 +570,14 @@ components:
           maximum: 1440
           default: 60
           example: 60
+        pauseUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Active pause (R-11): the escalation ladder is frozen until this
+            instant (null = no pause). The streak freezes instead of breaking.
+          example: '2026-11-15T06:00:00Z'
     ProfilePatch:
       description: Partial profile update; omitted fields keep their values.
       type: object

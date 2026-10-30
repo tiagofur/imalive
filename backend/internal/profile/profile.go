@@ -29,11 +29,12 @@ func NewHandlers(users *authstore.Queries) *Handlers {
 	return &Handlers{users: users}
 }
 
-// Register mounts the routes wrapped by the auth middleware: both routes are
-// protected (the contract declares them non-security per the bearer scheme).
+// Register mounts the routes wrapped by the auth middleware: all protected.
 func (h *Handlers) Register(mux *http.ServeMux, mw auth.Middleware) {
 	mux.Handle("GET /v1/me", mw.Wrap(http.HandlerFunc(h.get)))
 	mux.Handle("PATCH /v1/me", mw.Wrap(http.HandlerFunc(h.patch)))
+	mux.Handle("PUT /v1/me/pause", mw.Wrap(http.HandlerFunc(h.SetPause)))
+	mux.Handle("DELETE /v1/me/pause", mw.Wrap(http.HandlerFunc(h.CancelPause)))
 }
 
 // profilePatch mirrors the contract's ProfilePatch: pointer fields keep the
@@ -114,8 +115,13 @@ func (h *Handlers) patch(w http.ResponseWriter, r *http.Request) {
 
 var checkinTimePattern = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
 
-// profile maps the store row to the contract's UserProfile schema.
+// profileOf maps the store row to the contract's UserProfile schema.
+// PauseUntil is additive in contract v0.2.0 (issue #53).
 func profileOf(u authstore.User) map[string]any {
+	var pauseUntil any
+	if u.PauseUntil.Valid {
+		pauseUntil = u.PauseUntil.Time.UTC()
+	}
 	return map[string]any{
 		"id":                      u.ID,
 		"name":                    u.DisplayName,
@@ -123,6 +129,7 @@ func profileOf(u authstore.User) map[string]any {
 		"checkinTime":             hhmm(u.CheckinTime),
 		"timezone":                u.Timezone,
 		"escalationWindowMinutes": u.EscalationWindowMinutes,
+		"pauseUntil":              pauseUntil,
 	}
 }
 

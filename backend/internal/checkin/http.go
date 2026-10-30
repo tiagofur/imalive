@@ -21,14 +21,22 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/httpapi"
 )
 
+// PauseReader reports the user's live pause (R-11); implemented by the
+// profile handlers over the same users store.
+type PauseReader interface {
+	PauseActive(ctx context.Context, userID uuid.UUID) (bool, time.Time)
+}
+
 // Handlers serve POST /v1/checkins and GET /v1/checkins/today.
 type Handlers struct {
 	checkins *store.Queries
+	pauses   PauseReader
 }
 
-// NewHandlers wires the check-in handlers with the sqlc store.
-func NewHandlers(checkins *store.Queries) *Handlers {
-	return &Handlers{checkins: checkins}
+// NewHandlers wires the check-in handlers with the sqlc store and the pause
+// reader (the escalation engine consults the same source in #54).
+func NewHandlers(checkins *store.Queries, pauses PauseReader) *Handlers {
+	return &Handlers{checkins: checkins, pauses: pauses}
 }
 
 // Register mounts the routes wrapped by the auth middleware (both protected).
@@ -107,6 +115,10 @@ func (h *Handlers) today(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := map[string]any{"date": cycleDate.Time.Format("2006-01-02"), "status": "pending"}
+	if paused, until := h.pauses.PauseActive(r.Context(), uuid.MustParse(userID)); paused {
+		status["status"] = "paused"
+		status["pauseUntil"] = until.UTC()
+	}
 	if row, err := h.checkins.GetCheckinByDate(r.Context(), store.GetCheckinByDateParams{
 		UserID: uuid.MustParse(userID), CycleDate: cycleDate,
 	}); err == nil {

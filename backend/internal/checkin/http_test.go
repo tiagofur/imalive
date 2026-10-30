@@ -19,6 +19,7 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/checkin/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/db/dbtest"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
+	"github.com/tiagofur/imalive/backend/internal/profile"
 )
 
 type codeRecorder struct{ codes map[string]string }
@@ -53,7 +54,8 @@ func newAPI(t *testing.T) *api {
 		authstore.New(p.Pool), "test-secret")
 	mux := http.NewServeMux()
 	auth.NewHandlers(svc, auth.NewRateLimiter(rdb)).Register(mux)
-	checkin.NewHandlers(store.New(p.Pool)).Register(mux, auth.NewMiddleware(svc))
+	profile.NewHandlers(authstore.New(p.Pool)).Register(mux, auth.NewMiddleware(svc))
+	checkin.NewHandlers(store.New(p.Pool), profile.NewHandlers(authstore.New(p.Pool))).Register(mux, auth.NewMiddleware(svc))
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return &api{server: srv, sender: sender, pool: p.Pool, svc: svc}
@@ -159,6 +161,33 @@ func TestCheckinFlow(t *testing.T) {
 		}
 		if _, ok := body["nextCheckinAt"]; !ok {
 			t.Fatalf("today = %v, want nextCheckinAt", body)
+		}
+	})
+
+	t.Run("pause freezes today as paused until cancelled", func(t *testing.T) {
+		paused := "+5215577660003"
+		ptoken := api.signUp(t, paused)
+		// Activate pause via the contract route (PUT /v1/me/pause).
+		put := callAPI(t, http.MethodPut, api.server.URL+"/v1/me/pause", ptoken,
+			map[string]any{"until": time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)}, nil)
+		if put.StatusCode != http.StatusNoContent {
+			body := decodeBody(t, put)
+			t.Fatalf("pause = %d %v; want 204", put.StatusCode, body)
+		}
+		resp := callAPI(t, http.MethodGet, api.server.URL+"/v1/checkins/today", ptoken, nil, nil)
+		body := decodeBody(t, resp)
+		if body["status"] != "paused" {
+			t.Fatalf("today = %v, want paused", body)
+		}
+		// Cancel: back to pending.
+		del := callAPI(t, http.MethodDelete, api.server.URL+"/v1/me/pause", ptoken, nil, nil)
+		if del.StatusCode != http.StatusNoContent {
+			t.Fatalf("cancel = %d, want 204", del.StatusCode)
+		}
+		resp2 := callAPI(t, http.MethodGet, api.server.URL+"/v1/checkins/today", ptoken, nil, nil)
+		body2 := decodeBody(t, resp2)
+		if body2["status"] != "pending" {
+			t.Fatalf("after cancel = %v, want pending", body2)
 		}
 	})
 
