@@ -117,8 +117,9 @@ ORDER BY position;
 
 -- name: GetUserForEscalation :one
 -- Datos mínimos del destinatario de los recordatorios y del payload (nombre
--- de la persona que no confirmó). El teléfono es el destino WhatsApp (R-05/R-06).
-SELECT id, phone, display_name FROM users
+-- de la persona que no confirmó). El teléfono es el destino WhatsApp
+-- (R-05/R-06) y push_token el destino push cuando existe.
+SELECT id, phone, display_name, push_token FROM users
 WHERE id = $1;
 
 -- name: GetPendingSosJob :one
@@ -140,3 +141,13 @@ UPDATE escalation_jobs SET
     locked_until = NULL,
     updated_at = now()
 WHERE user_id = $1 AND kind = 'sos_alert' AND state = 'pending';
+
+-- name: SetUserPushToken :exec
+-- Registro del token FCM (POST /v1/devices): re-registrar reemplaza.
+UPDATE users SET push_token = $2, updated_at = now()
+WHERE id = $1;
+
+-- name: ClearUserPushToken :exec
+-- Revocación (DELETE /v1/devices): idempotente.
+UPDATE users SET push_token = NULL, updated_at = now()
+WHERE id = $1;

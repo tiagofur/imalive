@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,6 +135,82 @@ func TestSosEndpoints(t *testing.T) {
 		}
 		if n := auditKindCount(t, p, userID, escalation.AuditSosCancelled); n != 1 {
 			t.Fatalf("sos.cancelled audit rows = %d, want 1", n)
+		}
+	})
+
+	t.Run("devices: register, replace, revoke", func(t *testing.T) {
+		post := func(payload string) *http.Response {
+			t.Helper()
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, srv.URL+"/v1/devices", strings.NewReader(payload))
+			if err != nil {
+				t.Fatalf("request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+token)
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("POST /v1/devices: %v", err)
+			}
+			return resp
+		}
+		del := func() *http.Response {
+			t.Helper()
+			req, err := http.NewRequestWithContext(ctx, http.MethodDelete, srv.URL+"/v1/devices", nil)
+			if err != nil {
+				t.Fatalf("request: %v", err)
+			}
+			req.Header.Set("Authorization", "Bearer "+token)
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("DELETE /v1/devices: %v", err)
+			}
+			return resp
+		}
+		tokenOf := func() string {
+			t.Helper()
+			var tok *string
+			if err := p.Pool.QueryRow(ctx, `SELECT push_token FROM users WHERE id = $1`, userID).Scan(&tok); err != nil {
+				t.Fatalf("read token: %v", err)
+			}
+			if tok == nil {
+				return "<NULL>"
+			}
+			return *tok
+		}
+
+		resp := post(`{"token":"fcm-token-beta"}`)
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode != http.StatusNoContent {
+			t.Fatalf("register = %d, want 204", resp.StatusCode)
+		}
+		if got := tokenOf(); got != "fcm-token-beta" {
+			t.Fatalf("stored token = %v, want fcm-token-beta", got)
+		}
+
+		// Re-registering replaces; an empty token is rejected.
+		resp2 := post(`{"token":"fcm-token-gamma"}`)
+		defer func() { _ = resp2.Body.Close() }()
+		if resp2.StatusCode != http.StatusNoContent {
+			t.Fatalf("replace = %d, want 204", resp2.StatusCode)
+		}
+		if got := tokenOf(); got != "fcm-token-gamma" {
+			t.Fatalf("replaced token = %v, want fcm-token-gamma", got)
+		}
+		resp3 := post(`{"token":"  "}`)
+		defer func() { _ = resp3.Body.Close() }()
+		if resp3.StatusCode != http.StatusBadRequest {
+			t.Fatalf("empty token = %d, want 400", resp3.StatusCode)
+		}
+
+		for i := 0; i < 2; i++ { // revoking twice is fine
+			r := del()
+			defer func() { _ = r.Body.Close() }()
+			if r.StatusCode != http.StatusNoContent {
+				t.Fatalf("revoke = %d, want 204", r.StatusCode)
+			}
+		}
+		if got := tokenOf(); got != "<NULL>" {
+			t.Fatalf("token after revoke = %v, want NULL", got)
 		}
 	})
 

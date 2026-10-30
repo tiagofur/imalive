@@ -14,7 +14,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, phone, display_name, timezone)
 VALUES ($1, $2, $3, $4)
-RETURNING id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until
+RETURNING id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until, push_token
 `
 
 type CreateUserParams struct {
@@ -42,12 +42,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PauseUntil,
+		&i.PushToken,
 	)
 	return i, err
 }
 
 const getUserByPhone = `-- name: GetUserByPhone :one
-SELECT id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until FROM users
+SELECT id, phone, display_name, timezone, checkin_time, escalation_window_minutes, created_at, updated_at, pause_until, push_token FROM users
 WHERE phone = $1
 `
 
@@ -64,6 +65,7 @@ func (q *Queries) GetUserByPhone(ctx context.Context, phone string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PauseUntil,
+		&i.PushToken,
 	)
 	return i, err
 }

@@ -591,3 +591,63 @@ func TestEngineSos(t *testing.T) {
 		}
 	})
 }
+
+// TestEnginePush verifies the R-05 salida: the daily reminder reaches BOTH
+// channels when a device token is registered.
+func TestEnginePush(t *testing.T) {
+	ctx := context.Background()
+	p := dbtest.New(t)
+	loc, err := time.LoadLocation("America/Mexico_City")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	local := func(h, mi int) time.Time {
+		return time.Date(2026, 10, 30, h, mi, 0, 0, loc).UTC()
+	}
+	userID := p.SeedUser("+5215597000001")
+	if _, err := p.Pool.Exec(ctx,
+		`UPDATE users SET push_token = 'fcm-token-alpha' WHERE id = $1`, userID); err != nil {
+		t.Fatalf("seed token: %v", err)
+	}
+
+	engine, clock := testEngine(p, local(21, 30))
+	engine.ProcessTick(ctx)
+	clock.now = local(22, 0) // soft due
+	engine.ProcessTick(ctx)
+
+	var channels []string
+	rows, err := p.Pool.Query(ctx,
+		`SELECT channel, destination FROM outbox_event WHERE user_id = $1 AND payload->>'kind' = 'reminder_soft'`,
+		userID)
+	if err != nil {
+		t.Fatalf("query events: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ch, dest string
+		if err := rows.Scan(&ch, &dest); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		if ch == "push" && dest != "fcm-token-alpha" {
+			t.Fatalf("push destination = %s, want the registered token", dest)
+		}
+		channels = append(channels, ch)
+	}
+	if len(channels) != 2 {
+		t.Fatalf("soft rung channels = %v, want whatsapp + push", channels)
+	}
+
+	// Revoking the token stops the pushes at the source.
+	if _, err := p.Pool.Exec(ctx,
+		`UPDATE users SET push_token = NULL WHERE id = $1`, userID); err != nil {
+		t.Fatalf("clear token: %v", err)
+	}
+	clock.now = local(23, 0) // urgent due
+	engine.ProcessTick(ctx)
+	var pushes int
+	if err := p.Pool.QueryRow(ctx,
+		`SELECT count(*) FROM outbox_event WHERE user_id = $1 AND channel = 'push' AND payload->>'kind' = 'reminder_urgent'`,
+		userID).Scan(&pushes); err != nil || pushes != 0 {
+		t.Fatalf("push events after revoke = %d (err %v), want 0", pushes, err)
+	}
+}

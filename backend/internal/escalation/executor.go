@@ -229,7 +229,8 @@ func pgTz(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, V
 
 // resolveNotifications is the production resolver: it maps a job kind to its
 // outbox events (destinations + payload). The dispatcher of #57 reads the
-// outbox; nothing here sends anything.
+// outbox; nothing here sends anything. Reminders reach BOTH channels: the
+// WhatsApp text and the device push when a token is registered (R-05).
 func (e *Engine) resolveNotifications(ctx context.Context, job store.EscalationJob) ([]store.InsertOutboxEventParams, error) {
 	user, err := e.store.GetUserForEscalation(ctx, job.UserID)
 	if err != nil {
@@ -237,9 +238,13 @@ func (e *Engine) resolveNotifications(ctx context.Context, job store.EscalationJ
 	}
 	cycle := job.CycleDate.Time.Format("2006-01-02")
 	var dests []string
+	var pushToken string
 	switch job.Kind {
 	case KindReminderSoft, KindReminderUrgent:
 		dests = []string{user.Phone}
+		if user.PushToken != nil {
+			pushToken = *user.PushToken
+		}
 	case KindNotifyContact:
 		contacts, err := e.store.ListContactsByUser(ctx, job.UserID)
 		if err != nil {
@@ -263,7 +268,7 @@ func (e *Engine) resolveNotifications(ctx context.Context, job store.EscalationJ
 		return nil, fmt.Errorf("unknown job kind %q", job.Kind)
 	}
 
-	events := make([]store.InsertOutboxEventParams, 0, len(dests))
+	events := make([]store.InsertOutboxEventParams, 0, len(dests)+1)
 	for _, dest := range dests {
 		id, err := uuid.NewV7()
 		if err != nil {
@@ -281,6 +286,26 @@ func (e *Engine) resolveNotifications(ctx context.Context, job store.EscalationJ
 		events = append(events, store.InsertOutboxEventParams{
 			ID: id, UserID: job.UserID, Channel: outboxChannel,
 			Destination: dest, Payload: payload,
+			JobID: pgUUID(job.ID),
+		})
+	}
+	if pushToken != "" {
+		id, err := uuid.NewV7()
+		if err != nil {
+			return nil, fmt.Errorf("uuid v7: %w", err)
+		}
+		payload, err := json.Marshal(map[string]any{
+			"event":      "escalation.notify",
+			"kind":       job.Kind,
+			"user_name":  user.DisplayName,
+			"cycle_date": cycle,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("marshal payload: %w", err)
+		}
+		events = append(events, store.InsertOutboxEventParams{
+			ID: id, UserID: job.UserID, Channel: "push",
+			Destination: pushToken, Payload: payload,
 			JobID: pgUUID(job.ID),
 		})
 	}

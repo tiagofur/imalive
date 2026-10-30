@@ -119,6 +119,17 @@ func (q *Queries) ClaimDueJobs(ctx context.Context, arg ClaimDueJobsParams) ([]E
 	return items, nil
 }
 
+const clearUserPushToken = `-- name: ClearUserPushToken :exec
+UPDATE users SET push_token = NULL, updated_at = now()
+WHERE id = $1
+`
+
+// Revocación (DELETE /v1/devices): idempotente.
+func (q *Queries) ClearUserPushToken(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, clearUserPushToken, id)
+	return err
+}
+
 const completeJob = `-- name: CompleteJob :exec
 UPDATE escalation_jobs SET
     state = 'done',
@@ -279,7 +290,7 @@ func (q *Queries) GetPendingSosJob(ctx context.Context, userID uuid.UUID) (Escal
 }
 
 const getUserForEscalation = `-- name: GetUserForEscalation :one
-SELECT id, phone, display_name FROM users
+SELECT id, phone, display_name, push_token FROM users
 WHERE id = $1
 `
 
@@ -287,14 +298,21 @@ type GetUserForEscalationRow struct {
 	ID          uuid.UUID
 	Phone       string
 	DisplayName string
+	PushToken   *string
 }
 
 // Datos mínimos del destinatario de los recordatorios y del payload (nombre
-// de la persona que no confirmó). El teléfono es el destino WhatsApp (R-05/R-06).
+// de la persona que no confirmó). El teléfono es el destino WhatsApp
+// (R-05/R-06) y push_token el destino push cuando existe.
 func (q *Queries) GetUserForEscalation(ctx context.Context, id uuid.UUID) (GetUserForEscalationRow, error) {
 	row := q.db.QueryRow(ctx, getUserForEscalation, id)
 	var i GetUserForEscalationRow
-	err := row.Scan(&i.ID, &i.Phone, &i.DisplayName)
+	err := row.Scan(
+		&i.ID,
+		&i.Phone,
+		&i.DisplayName,
+		&i.PushToken,
+	)
 	return i, err
 }
 
@@ -434,5 +452,21 @@ type RetryJobParams struct {
 // Reintento con backoff: $2 = run_at calculado por el dominio.
 func (q *Queries) RetryJob(ctx context.Context, arg RetryJobParams) error {
 	_, err := q.db.Exec(ctx, retryJob, arg.ID, arg.RunAt, arg.LastError)
+	return err
+}
+
+const setUserPushToken = `-- name: SetUserPushToken :exec
+UPDATE users SET push_token = $2, updated_at = now()
+WHERE id = $1
+`
+
+type SetUserPushTokenParams struct {
+	ID        uuid.UUID
+	PushToken *string
+}
+
+// Registro del token FCM (POST /v1/devices): re-registrar reemplaza.
+func (q *Queries) SetUserPushToken(ctx context.Context, arg SetUserPushTokenParams) error {
+	_, err := q.db.Exec(ctx, setUserPushToken, arg.ID, arg.PushToken)
 	return err
 }
