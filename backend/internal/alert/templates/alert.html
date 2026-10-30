@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alerta familiar — Tranqui</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f4f1ea; color: #222; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  main { background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); max-width: 26rem; width: 100%; padding: 28px 24px; }
+  .brand { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: #8a7f6d; margin-bottom: 12px; }
+  h1 { font-size: 1.5rem; line-height: 1.2; margin-bottom: 12px; }
+  p { line-height: 1.5; margin-bottom: 12px; color: #444; }
+  .meta { font-size: .9rem; color: #666; }
+  form { display: block; margin-top: 12px; }
+  button { width: 100%; border: 0; border-radius: 12px; padding: 16px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+  .go { background: #2e7d4f; color: #fff; }
+  .no { background: #eee; color: #333; }
+  .claimed { background: #e6f2ea; border-radius: 12px; padding: 14px; font-weight: 600; color: #2e7d4f; }
+  .closed { background: #eef; border-radius: 12px; padding: 14px; color: #33509e; }
+  .expired { color: #8a5a00; }
+</style>
+</head>
+<body>
+<main>
+{{if .Invalid}}
+  <p class="brand">Tranqui · alerta familiar</p>
+  <h1>Enlace no válido</h1>
+  <p>Pide el enlace de nuevo a quien te lo compartió.</p>
+{{else if .Expired}}
+  <p class="brand">Tranqui · alerta familiar</p>
+  <h1 class="expired">Este enlace expiró</h1>
+  <p>Pide un enlace nuevo a quien te lo compartió.</p>
+{{else}}
+  <p class="brand">Tranqui · alerta familiar</p>
+  <h1>{{.UserName}} no ha confirmado</h1>
+  <p>Sin señal de vida desde el <strong>{{.OpenedAt}}</strong>.</p>
+  <p class="meta">Última señal conocida: {{.LastSignal}}</p>
+  {{if .ClaimerName}}
+    <p class="claimed">{{.ClaimerName}} está yendo ✅</p>
+    <p class="meta">Otra persona del círculo ya se hizo cargo de esta alerta.</p>
+  {{else if .Closed}}
+    <p class="closed">Incidente cerrado: {{.ClosedMessage}}</p>
+  {{else}}
+    <p><strong>¿Puedes comprobarlo?</strong> Tómate un momento: contacta a {{.UserName}} y confirma que está bien.</p>
+    <form method="post" action="/alert/{{.Token}}/claim"><button class="go" type="submit">Voy yo</button></form>
+    <form method="post" action="/alert/{{.Token}}/decline"><button class="no" type="submit">No puedo</button></form>
+  {{end}}
+{{end}}
+</main>
+</body>
+</html>

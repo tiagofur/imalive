@@ -94,7 +94,7 @@ func VerifyAlertToken(secret []byte, token string, now time.Time) (incidentID, c
 	}
 	exp = time.Unix(expUnix, 0).UTC()
 	if now.After(exp) {
-		return uuid.Nil, uuid.Nil, exp, errExpiredToken
+		return uuid.Nil, uuid.Nil, exp, ErrExpiredToken
 	}
 	return incidentID, contactID, exp, nil
 }
@@ -104,5 +104,5 @@ func VerifyAlertToken(secret []byte, token string, now time.Time) (incidentID, c
 var (
 	errMalformedToken    = errors.New("alert: malformed token")
 	errBadTokenSignature = errors.New("alert: invalid token signature")
-	errExpiredToken      = errors.New("alert: expired token")
+	ErrExpiredToken      = errors.New("alert: expired token")
 )

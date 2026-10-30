@@ -19,6 +19,7 @@ import (
 const (
 	AuditIncidentOpened         = "incident.opened"
 	AuditIncidentCircleNotified = "incident.circle_notified"
+	AuditIncidentClaimed        = "incident.claimed"
 	AuditIncidentClosed         = "incident.closed"
 	// AuditLadderSkipped marks a rung that completed without notifying
 	// because there was nobody to notify or nobody left to alert.
@@ -65,9 +66,10 @@ func openIncidentForJob(ctx context.Context, q *store.Queries, job store.Escalat
 // incidentAlertEvents builds the actionable alert events (R-08) for the given
 // destinations: the payload carries who did not confirm, since when, the last
 // known signal and a signed per-contact link for "Voy yo / No puedo". The
-// dispatcher of #57 composes the text from these fields.
-func (e *Engine) incidentAlertEvents(ctx context.Context, q *store.Queries, job store.EscalationJob, inc store.Incident, contacts []store.ListContactsByUserRow) ([]store.InsertOutboxEventParams, error) {
-	user, err := q.GetUserForEscalation(ctx, job.UserID)
+// dispatcher of #57 composes the text from these fields. jobID ties the
+// events to the ladder rung when one exists (web-triggered events have none).
+func (e *Engine) incidentAlertEvents(ctx context.Context, q *store.Queries, userID uuid.UUID, jobID *uuid.UUID, inc store.Incident, contacts []store.ListContactsByUserRow) ([]store.InsertOutboxEventParams, error) {
+	user, err := q.GetUserForEscalation(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("user: %w", err)
 	}
@@ -100,12 +102,15 @@ func (e *Engine) incidentAlertEvents(ctx context.Context, q *store.Queries, job 
 		if err != nil {
 			return nil, fmt.Errorf("marshal payload: %w", err)
 		}
-		events = append(events, store.InsertOutboxEventParams{
-			ID: id, UserID: job.UserID, Channel: outboxChannel,
+		ev := store.InsertOutboxEventParams{
+			ID: id, UserID: userID, Channel: outboxChannel,
 			Destination: c.Phone, Payload: payload,
-			JobID:      pgUUID(job.ID),
 			IncidentID: pgUUID(inc.ID),
-		})
+		}
+		if jobID != nil {
+			ev.JobID = pgUUID(*jobID)
+		}
+		events = append(events, ev)
 	}
 	return events, nil
 }
@@ -147,7 +152,8 @@ func (e *Engine) executeIncidentRung(ctx context.Context, job store.EscalationJo
 			return
 		}
 		// "Contacto 1" = the first remaining contact (lowest position).
-		events, err = e.incidentAlertEvents(ctx, q, job, inc, contacts[:1])
+		jobID := job.ID
+		events, err = e.incidentAlertEvents(ctx, q, job.UserID, &jobID, inc, contacts[:1])
 		if err != nil {
 			e.failOrRetry(ctx, job, e.clock.Now(), err)
 			return
@@ -196,7 +202,8 @@ func (e *Engine) executeIncidentRung(ctx context.Context, job store.EscalationJo
 				e.failOrRetry(ctx, job, e.clock.Now(), fmt.Errorf("contacts: %w", cerr))
 				return
 			}
-			events, cerr = e.incidentAlertEvents(ctx, q, job, inc, contacts)
+			jobID := job.ID
+			events, cerr = e.incidentAlertEvents(ctx, q, job.UserID, &jobID, inc, contacts)
 			if cerr != nil {
 				e.failOrRetry(ctx, job, e.clock.Now(), cerr)
 				return
@@ -290,10 +297,162 @@ func (e *Engine) closeIncidentForSignal(ctx context.Context, q *store.Queries, u
 		}); err != nil {
 			return fmt.Errorf("outbox insert: %w", err)
 		}
+
 	}
 	return insertAudit(ctx, q, auditParams{
 		UserID: userID, CycleDate: inc.CycleDate, Kind: AuditIncidentClosed,
 		IncidentID: &inc.ID,
 		Data:       map[string]any{"reason": reason, "notified": len(contacts)},
 	})
+}
+
+// Claim records "Voy yo" (R-08 + R-09): the FIRST claimant wins and the rest
+// of the circle hears "X está yendo"; a late claim changes nothing (the
+// caller re-renders the current state, the winner stands). The transition,
+// the notifications and the audit row share one transaction.
+func (e *Engine) Claim(ctx context.Context, incidentID, contactID uuid.UUID) (store.Incident, error) {
+	tx, err := e.pool.Begin(ctx)
+	if err != nil {
+		return store.Incident{}, fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := e.store.WithTx(tx)
+
+	inc, err := q.GetIncident(ctx, incidentID)
+	if err != nil {
+		return store.Incident{}, fmt.Errorf("incident: %w", err)
+	}
+	n, err := q.ClaimIncident(ctx, store.ClaimIncidentParams{ID: incidentID, ClaimedBy: pgUUID(contactID)})
+	if err != nil {
+		return store.Incident{}, fmt.Errorf("claim: %w", err)
+	}
+	if n == 1 {
+		claimer, err := q.GetContactByID(ctx, contactID)
+		if err != nil {
+			return store.Incident{}, fmt.Errorf("claimer: %w", err)
+		}
+		contacts, err := q.ListContactsByUser(ctx, inc.UserID)
+		if err != nil {
+			return store.Incident{}, fmt.Errorf("contacts: %w", err)
+		}
+		for _, c := range contacts {
+			if c.ID == contactID {
+				continue // the claimant knows
+			}
+			id, err := uuid.NewV7()
+			if err != nil {
+				return store.Incident{}, fmt.Errorf("uuid v7: %w", err)
+			}
+			payload, err := json.Marshal(map[string]any{
+				"event":        "incident.claimed",
+				"incident_id":  inc.ID,
+				"claimer_name": claimer.DisplayName,
+			})
+			if err != nil {
+				return store.Incident{}, fmt.Errorf("marshal payload: %w", err)
+			}
+			if err := q.InsertOutboxEvent(ctx, store.InsertOutboxEventParams{
+				ID: id, UserID: inc.UserID, Channel: outboxChannel,
+				Destination: c.Phone, Payload: payload,
+				IncidentID: pgUUID(inc.ID),
+			}); err != nil {
+				return store.Incident{}, fmt.Errorf("outbox insert: %w", err)
+			}
+		}
+		if err := insertAudit(ctx, q, auditParams{
+			UserID: inc.UserID, CycleDate: inc.CycleDate, Kind: AuditIncidentClaimed,
+			IncidentID: &inc.ID,
+			Data:       map[string]any{"claimed_by": contactID, "claimer": claimer.DisplayName},
+		}); err != nil {
+			return store.Incident{}, fmt.Errorf("audit: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return store.Incident{}, fmt.Errorf("commit: %w", err)
+	}
+	// The tx-bound store is closed after the commit: re-read over the pool.
+	return e.store.GetIncident(ctx, incidentID)
+}
+
+// Decline records "No puedo" (R-08): the alert escalates to the whole circle
+// right now (the machine's Contacto1Notificado → CirculoNotificado), the
+// pending ladder rung for the circle dies in the same transaction (no double
+// blast), and the circle alerts stay claimable by anyone.
+func (e *Engine) Decline(ctx context.Context, incidentID uuid.UUID) (store.Incident, error) {
+	tx, err := e.pool.Begin(ctx)
+	if err != nil {
+		return store.Incident{}, fmt.Errorf("begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := e.store.WithTx(tx)
+
+	inc, err := q.GetIncident(ctx, incidentID)
+	if err != nil {
+		return store.Incident{}, fmt.Errorf("incident: %w", err)
+	}
+	n, err := q.CircleNotifiedIncident(ctx, incidentID)
+	if err != nil {
+		return store.Incident{}, fmt.Errorf("transition: %w", err)
+	}
+	if n == 1 {
+		contacts, err := q.ListContactsByUser(ctx, inc.UserID)
+		if err != nil {
+			return store.Incident{}, fmt.Errorf("contacts: %w", err)
+		}
+		events, err := e.incidentAlertEvents(ctx, q, inc.UserID, nil, inc, contacts)
+		if err != nil {
+			return store.Incident{}, err
+		}
+		for _, ev := range events {
+			if err := q.InsertOutboxEvent(ctx, ev); err != nil {
+				return store.Incident{}, fmt.Errorf("outbox insert: %w", err)
+			}
+		}
+		if _, err := q.CancelPendingJobsByUserAndKind(ctx, store.CancelPendingJobsByUserAndKindParams{
+			UserID: inc.UserID, Kind: KindNotifyCircle,
+		}); err != nil {
+			return store.Incident{}, fmt.Errorf("cancel circle rung: %w", err)
+		}
+		if err := insertAudit(ctx, q, auditParams{
+			UserID: inc.UserID, CycleDate: inc.CycleDate, Kind: AuditIncidentCircleNotified,
+			IncidentID: &inc.ID,
+			Data:       map[string]any{"reason": "declined", "notified": len(events)},
+		}); err != nil {
+			return store.Incident{}, fmt.Errorf("audit: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return store.Incident{}, fmt.Errorf("commit: %w", err)
+	}
+	// The tx-bound store is closed after the commit: re-read over the pool.
+	return e.store.GetIncident(ctx, incidentID)
+}
+
+// IncidentView is the read model of the alert page (R-08): who is not
+// confirmed, since when, the last known signal and who claimed (if anyone).
+type IncidentView struct {
+	Incident store.Incident
+	UserName string
+	Claimer  string
+}
+
+// View loads the alert page data for a verified token's incident.
+func (e *Engine) View(ctx context.Context, incidentID uuid.UUID) (IncidentView, error) {
+	q := e.store
+	inc, err := q.GetIncident(ctx, incidentID)
+	if err != nil {
+		return IncidentView{}, fmt.Errorf("incident: %w", err)
+	}
+	user, err := q.GetUserForEscalation(ctx, inc.UserID)
+	if err != nil {
+		return IncidentView{}, fmt.Errorf("user: %w", err)
+	}
+	view := IncidentView{Incident: inc, UserName: user.DisplayName}
+	if inc.ClaimedBy.Valid {
+		claimer, err := q.GetContactByID(ctx, uuid.UUID(inc.ClaimedBy.Bytes))
+		if err == nil {
+			view.Claimer = claimer.DisplayName
+		}
+	}
+	return view, nil
 }
