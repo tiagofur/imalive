@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/db"
 	"github.com/tiagofur/imalive/backend/internal/platform/lifecycle"
 	"github.com/tiagofur/imalive/backend/internal/platform/logging"
+	"github.com/tiagofur/imalive/backend/internal/platform/msg"
+	"github.com/tiagofur/imalive/backend/internal/platform/push"
 )
 
 // version is injected at build time: go build -ldflags "-X main.version=vX.Y.Z".
@@ -59,6 +62,17 @@ func run() error {
 		escalation.NewAlertTokenSigner([]byte(cfg.AlertLinkSecret), cfg.PublicBaseURL,
 			escalation.SystemClock{}))
 
+	// The outbox dispatcher (issue #57): the same tick drains the outbox.
+	// WhatsApp/SMS go through the sandbox until #6 delivers Twilio
+	// credentials; push goes through the sandbox stub (FCM HTTP v1 lands
+	// behind the same interface once credentials exist).
+	var messages msg.Notifier = msg.NoopNotifier{}
+	if cfg.OtpSender == "sandbox" {
+		messages = msg.NewSandboxNotifier("")
+	}
+	dispatcher := escalation.NewDispatcher(pool, escalation.SystemClock{}, log,
+		messages, push.NewSandboxSender())
+
 	ticker := time.NewTicker(cycleInterval)
 	defer ticker.Stop()
 
@@ -67,7 +81,10 @@ func run() error {
 		slog.String("version", version),
 		slog.Duration("cycle_interval", cycleInterval),
 	)
-	if err := lifecycle.Run(ctx, ticker.C, engine.ProcessTick); err != nil {
+	if err := lifecycle.Run(ctx, ticker.C, func(ctx context.Context) {
+		engine.ProcessTick(ctx)
+		dispatcher.DispatchTick(ctx)
+	}); err != nil {
 		return err
 	}
 	log.Info("worker stopped")
