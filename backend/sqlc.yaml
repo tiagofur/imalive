@@ -1,0 +1,34 @@
+version: "2"
+sql:
+  # The schema source of truth is the migrations directory: sqlc reads the
+  # same DDL that ships to production (no parallel schema definition). One
+  # block per domain package; omit_unused_structs prunes the other domain's
+  # models from each generated store.
+  - engine: "postgresql"
+    schema: "migrations"
+    queries: "internal/circle/queries"
+    gen:
+      go:
+        package: "store"
+        out: "internal/circle/store"
+        sql_package: "pgx/v5"
+        emit_json_tags: false
+        emit_pointers_for_null_types: true
+        omit_unused_structs: true
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+  - engine: "postgresql"
+    schema: "migrations"
+    queries: "internal/checkin/queries"
+    gen:
+      go:
+        package: "store"
+        out: "internal/checkin/store"
+        sql_package: "pgx/v5"
+        emit_json_tags: false
+        emit_pointers_for_null_types: true
+        omit_unused_structs: true
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
