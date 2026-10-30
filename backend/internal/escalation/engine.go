@@ -34,6 +34,19 @@ type Engine struct {
 	// resolve maps a claimed job to its outbox events. A field, not a
 	// hardwired call, so failure tests inject errors without real breakage.
 	resolve func(ctx context.Context, job store.EscalationJob) ([]store.InsertOutboxEventParams, error)
+	// signer signs the web alert links (R-08) that travel in the incident
+	// outbox payloads; baseURL completes them into absolute URLs. Optional:
+	// without a signer the payloads carry an empty token (local dev).
+	signer  *AlertTokenSigner
+	baseURL string
+}
+
+// WithAlertSigner enables the signed web alert links (R-08) in the incident
+// payloads. Wiring: cmd/api and cmd/worker share the configured secret.
+func (e *Engine) WithAlertSigner(signer *AlertTokenSigner) *Engine {
+	e.signer = signer
+	e.baseURL = signer.BaseURL()
+	return e
 }
 
 // New wires the engine over a pool and an injectable clock.

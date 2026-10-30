@@ -90,6 +90,19 @@ func (e *Engine) execute(ctx context.Context, job store.EscalationJob) {
 		return
 	}
 
+	switch job.Kind {
+	case KindNotifyContact, KindNotifyCircle:
+		// The incident rungs own their transaction (the incident state
+		// machine changes with them).
+		e.executeIncidentRung(ctx, job)
+	default:
+		e.executeReminderRung(ctx, job, now)
+	}
+}
+
+// executeReminderRung runs the plain notification rungs (reminders): resolve
+// destinations, then outbox + done + audit in one transaction.
+func (e *Engine) executeReminderRung(ctx context.Context, job store.EscalationJob, now time.Time) {
 	events, err := e.resolve(ctx, job)
 	if err != nil {
 		e.failOrRetry(ctx, job, now, fmt.Errorf("resolve %s: %w", job.Kind, err))

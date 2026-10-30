@@ -2,12 +2,15 @@ package escalation_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/tiagofur/imalive/backend/internal/escalation"
+	"github.com/tiagofur/imalive/backend/internal/escalation/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/db/dbtest"
 )
 
@@ -57,14 +60,18 @@ func TestEngineExecutesLadder(t *testing.T) {
 			if job.State != "done" {
 				t.Fatalf("rung %s state = %s, want done", r.kind, job.State)
 			}
-			if n := auditKindCount(t, p, userID, escalation.AuditLadderNotified); n != i+1 {
-				t.Fatalf("rung %s: audit notified = %d rows, want %d", r.kind, n, i+1)
-			}
 		}
 
-		// Silence, not signal: every state change left evidence (spec §Auditoría).
-		if n := auditKindCount(t, p, userID, escalation.AuditCycleOpened); n != 1 {
-			t.Fatalf("audit cycle.opened = %d rows, want 1", n)
+		// Evidence per rung kind: the reminders notified, the incident rungs
+		// opened and escalated the incident (spec §Auditoría).
+		if n := auditKindCount(t, p, userID, escalation.AuditLadderNotified); n != 2 {
+			t.Fatalf("audit ladder.notified = %d rows, want 2 (the reminders)", n)
+		}
+		if n := auditKindCount(t, p, userID, escalation.AuditIncidentOpened); n != 1 {
+			t.Fatalf("audit incident.opened = %d rows, want 1", n)
+		}
+		if n := auditKindCount(t, p, userID, escalation.AuditIncidentCircleNotified); n != 1 {
+			t.Fatalf("audit incident.circle_notified = %d rows, want 1", n)
 		}
 		// Re-running the tick at the same instant cannot duplicate anything.
 		engine.ProcessTick(ctx)
@@ -116,14 +123,16 @@ func TestEngineExecutesLadder(t *testing.T) {
 	})
 }
 
-func seedContact(t *testing.T, p *dbtest.Pool, userID uuid.UUID, name, phone string, position int) {
+func seedContact(t *testing.T, p *dbtest.Pool, userID uuid.UUID, name, phone string, position int) uuid.UUID {
 	t.Helper()
+	id := mustUUID(t)
 	if _, err := p.Pool.Exec(context.Background(),
 		`INSERT INTO contacts (id, user_id, display_name, phone, position)
 		 VALUES ($1, $2, $3, $4, $5)`,
-		mustUUID(t), userID, name, phone, position); err != nil {
+		id, userID, name, phone, position); err != nil {
 		t.Fatalf("seed contact: %v", err)
 	}
+	return id
 }
 
 func outboxCount(t *testing.T, p *dbtest.Pool, userID uuid.UUID) int {
@@ -156,3 +165,248 @@ func auditKindCount(t *testing.T, p *dbtest.Pool, userID uuid.UUID, kind string)
 	}
 	return n
 }
+
+// TestEngineIncidents drives the incident state machine (R-08 + R-09) under
+// simulated time: the contact rung opens it with the frozen last known
+// signal, the circle rung escalates it, and the user's late signal closes it
+// (resolved after a claim, false alarm without) with an "all clear" to the
+// circle — every transition inside the same transaction as its notifications.
+func TestEngineIncidents(t *testing.T) {
+	ctx := context.Background()
+	p := dbtest.New(t)
+	loc, err := time.LoadLocation("America/Mexico_City")
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+	local := func(y int, mo time.Month, d, h, mi int) time.Time {
+		return time.Date(y, mo, d, h, mi, 0, 0, loc).UTC()
+	}
+
+	seedCheckin := func(userID uuid.UUID, cycleDay time.Time, at time.Time) {
+		t.Helper()
+		// pgtype.Date encodes the UTC date: normalize to UTC midnight or a
+		// local instant silently shifts the cycle date by the offset.
+		day := time.Date(cycleDay.Year(), cycleDay.Month(), cycleDay.Day(), 0, 0, 0, 0, time.UTC)
+		if _, err := p.Pool.Exec(ctx,
+			`INSERT INTO checkins (id, user_id, cycle_date, checked_in_at)
+			 VALUES ($1, $2, $3, $4)`, mustUUID(t), userID, pgDate(day), pgTz(at)); err != nil {
+			t.Fatalf("seed checkin: %v", err)
+		}
+	}
+	incidentOf := func(userID uuid.UUID) store.Incident {
+		t.Helper()
+		rows, err := p.Pool.Query(ctx,
+			`SELECT id, user_id, cycle_date, state, claimed_by, last_signal_at, opened_at, closed_at
+			 FROM incidents WHERE user_id = $1 ORDER BY opened_at DESC LIMIT 1`, userID)
+		if err != nil {
+			t.Fatalf("query incident: %v", err)
+		}
+		defer rows.Close()
+		var inc store.Incident
+		found := false
+		for rows.Next() {
+			if err := rows.Scan(&inc.ID, &inc.UserID, &inc.CycleDate, &inc.State,
+				&inc.ClaimedBy, &inc.LastSignalAt, &inc.OpenedAt, &inc.ClosedAt); err != nil {
+				t.Fatalf("scan incident: %v", err)
+			}
+			found = true
+		}
+		if !found {
+			t.Fatal("incident not found")
+		}
+		return inc
+	}
+
+	t.Run("the contact rung opens the incident with the frozen last signal", func(t *testing.T) {
+		userID := p.SeedUser("+5215570000001")
+		contactPhone := "+5215570000091"
+		seedContact(t, p, userID, "María", contactPhone, 1)
+		signal := local(2026, 10, 29, 21, 5) // yesterday's check-in: the last known signal
+		// local() returns UTC instants: the cycle day must be the civil
+		// LOCAL date, passed explicitly as UTC midnight.
+		seedCheckin(userID, time.Date(2026, 10, 29, 0, 0, 0, 0, time.UTC), signal)
+
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx) // opens the cycle
+		clock.now = local(2026, 10, 31, 6, 0)
+		engine.ProcessTick(ctx) // the contact rung fires
+
+		inc := incidentOf(userID)
+		if inc.State != escalation.IncidentContact1Notified {
+			t.Fatalf("incident state = %s, want contact1_notified", inc.State)
+		}
+		if inc.LastSignalAt.Time.UTC() != signal.UTC() {
+			t.Fatalf("last_signal_at = %v, want the frozen %v", inc.LastSignalAt.Time, signal)
+		}
+		if n := auditKindCount(t, p, userID, escalation.AuditIncidentOpened); n != 1 {
+			t.Fatalf("incident.opened audit rows = %d, want 1", n)
+		}
+		ev := lastEventFields(t, p, userID)
+		if ev.destination != contactPhone {
+			t.Fatalf("alert went to %s, want the contact", ev.destination)
+		}
+		if ev.incidentID != inc.ID {
+			t.Fatalf("alert incident_id = %v, want the incident", ev.incidentID)
+		}
+		if ev.payload["event"] != "incident.alert" || ev.payload["user_name"] == "" {
+			t.Fatalf("alert payload = %v, want an incident.alert with the user name", ev.payload)
+		}
+	})
+
+	t.Run("the circle rung escalates a contact1_notified incident", func(t *testing.T) {
+		userID := p.SeedUser("+5215570000002")
+		contact1 := "+5215570000092"
+		contact2 := "+5215570000093"
+		seedContact(t, p, userID, "María", contact1, 1)
+		seedContact(t, p, userID, "Beto", contact2, 2)
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx)
+		clock.now = local(2026, 10, 31, 6, 0)
+		engine.ProcessTick(ctx) // contact rung: opens the incident
+		clock.now = local(2026, 10, 31, 10, 0)
+		engine.ProcessTick(ctx) // circle rung
+
+		if inc := incidentOf(userID); inc.State != escalation.IncidentCircleNotified {
+			t.Fatalf("incident state = %s, want circle_notified", inc.State)
+		}
+		if n := outboxCount(t, p, userID); n != 5 { // 2 reminders + contact alert + 2 circle alerts
+			t.Fatalf("outbox = %d events, want 5", n)
+		}
+		// The circle heard both phones (dedupe by job keeps them distinct).
+		if n := auditKindCount(t, p, userID, escalation.AuditIncidentCircleNotified); n != 1 {
+			t.Fatalf("incident.circle_notified audit rows = %d, want 1", n)
+		}
+	})
+
+	t.Run("the late signal closes claimed as resolved and fresh as false alarm", func(t *testing.T) {
+		userID := p.SeedUser("+5215570000003")
+		contactPhone := "+5215570000094"
+		contactID := seedContact(t, p, userID, "María", contactPhone, 1)
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx)
+		clock.now = local(2026, 10, 31, 6, 0)
+		engine.ProcessTick(ctx) // incident opens
+
+		// The contact claims (the web action of #55, simulated via the store).
+		inc := incidentOf(userID)
+		if _, err := store.New(p.Pool).ClaimIncident(ctx, store.ClaimIncidentParams{
+			ID: inc.ID, ClaimedBy: pgUUID(contactID),
+		}); err != nil {
+			t.Fatalf("claim: %v", err)
+		}
+
+		// The user finally checks in: resolved + "all clear" to the circle.
+		tx, err := p.Pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin: %v", err)
+		}
+		if err := engine.SignalReceivedTx(ctx, tx, userID, pgDate(time.Date(2026, 10, 31, 0, 0, 0, 0, time.UTC))); err != nil {
+			_ = tx.Rollback(ctx)
+			t.Fatalf("SignalReceivedTx: %v", err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatalf("commit: %v", err)
+		}
+		if got := incidentOf(userID); got.State != escalation.IncidentClosedResolved {
+			t.Fatalf("claimed incident closed as %s, want closed_resolved", got.State)
+		}
+		if n := auditKindCount(t, p, userID, escalation.AuditIncidentClosed); n != 1 {
+			t.Fatalf("incident.closed audit rows = %d, want 1", n)
+		}
+		last := lastEventFields(t, p, userID)
+		if last.payload["event"] != "incident.all_clear" {
+			t.Fatalf("last event = %v, want the all_clear to the circle", last.payload)
+		}
+
+		// A user with no claimant closes as false alarm instead.
+		other := p.SeedUser("+5215570000005")
+		seedContact(t, p, other, "Ana", "+5215570000095", 1)
+		engine2, clock2 := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine2.ProcessTick(ctx)
+		clock2.now = local(2026, 10, 31, 6, 0)
+		engine2.ProcessTick(ctx)
+		tx2, err := p.Pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin: %v", err)
+		}
+		if err := engine2.SignalReceivedTx(ctx, tx2, other, pgDate(time.Date(2026, 10, 31, 0, 0, 0, 0, time.UTC))); err != nil {
+			_ = tx2.Rollback(ctx)
+			t.Fatalf("SignalReceivedTx: %v", err)
+		}
+		if err := tx2.Commit(ctx); err != nil {
+			t.Fatalf("commit: %v", err)
+		}
+		if got := incidentOf(other); got.State != escalation.IncidentClosedFalseAlarm {
+			t.Fatalf("unclaimed incident closed as %s, want closed_false_alarm", got.State)
+		}
+	})
+
+	t.Run("no live incident: the circle rung completes without notifying", func(t *testing.T) {
+		userID := p.SeedUser("+5215570000006")
+		engine, clock := testEngine(p, local(2026, 10, 30, 21, 30))
+		engine.ProcessTick(ctx)
+		// The contact rung never fired (job manipulated away): no incident.
+		if _, err := p.Pool.Exec(ctx,
+			`UPDATE escalation_jobs SET state = 'cancelled' WHERE user_id = $1 AND kind = 'notify_contact'`, userID); err != nil {
+			t.Fatalf("cancel job: %v", err)
+		}
+		clock.now = local(2026, 10, 31, 10, 0)
+		engine.ProcessTick(ctx) // circle rung with no live incident
+
+		if job := jobOf(t, p, userID, escalation.KindNotifyCircle); job.State != "done" {
+			t.Fatalf("circle rung state = %s, want done (skips, never crashes)", job.State)
+		}
+		if n := outboxCount(t, p, userID); n != 2 { // only the reminders
+			t.Fatalf("outbox = %d events, want 2 (no circle alerts without an incident)", n)
+		}
+	})
+}
+
+// lastEventFields reads the newest outbox event with the fields the incident
+// tests assert on.
+func lastEventFields(t *testing.T, p *dbtest.Pool, userID uuid.UUID) struct {
+	destination string
+	incidentID  uuid.UUID
+	payload     map[string]any
+} {
+	t.Helper()
+	rows, err := p.Pool.Query(context.Background(),
+		// Only incident events: uuid v7 ordering is not reliable within the
+		// same millisecond, so the reminders could tie with the alert.
+		`SELECT destination, incident_id, payload FROM outbox_event
+		 WHERE user_id = $1 AND incident_id IS NOT NULL
+		 ORDER BY created_at DESC, id DESC LIMIT 1`, userID)
+	if err != nil {
+		t.Fatalf("query outbox: %v", err)
+	}
+	defer rows.Close()
+	var dest string
+	var incident pgtype.UUID
+	var payload []byte
+	found := false
+	for rows.Next() {
+		if err := rows.Scan(&dest, &incident, &payload); err != nil {
+			t.Fatalf("scan outbox: %v", err)
+		}
+		found = true
+	}
+	if !found {
+		t.Fatal("no outbox event found")
+	}
+	var m map[string]any
+	if err := json.Unmarshal(payload, &m); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	incID := uuid.Nil
+	if incident.Valid {
+		incID = uuid.UUID(incident.Bytes)
+	}
+	return struct {
+		destination string
+		incidentID  uuid.UUID
+		payload     map[string]any
+	}{dest, incID, m}
+}
+
+// pgUUID converts a domain uuid to the store type from the black-box side.
+func pgUUID(u uuid.UUID) pgtype.UUID { return pgtype.UUID{Bytes: u, Valid: true} }
