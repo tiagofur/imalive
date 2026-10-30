@@ -7,10 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		80F3733B352C7675E213100E /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E476971D3C9E0EAB49F55A /* SmokeTests.swift */; };
+		0A55CD642199CC93D87C1D68 /* HomeModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD206CA431C145F98478CCA3 /* HomeModelTests.swift */; };
 		8B53C09A16165213C97516E4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692440EA8FA22B66747BCE05 /* ContentView.swift */; };
-		D22E62042BF881F20BFD35E6 /* LaunchSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6306A2BE9C1684BA9418BBF4 /* LaunchSmokeTests.swift */; };
+		8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF107937C3C937BA55CE000D /* HomeView.swift */; };
+		8FBECA54FA5BB20C437F25AC /* HomeSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF204D1AB0A521E67A331953 /* HomeSmokeTests.swift */; };
+		BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F840AAEA2345DC777F1AB89F /* HomeModel.swift */; };
 		E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5C943B16A0B544C4892340 /* TranquiApp.swift */; };
+		FDA8771BC425D8CE5B09D1E4 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = EE2260895D085A2A6C908804 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,12 +35,17 @@
 
 /* Begin PBXFileReference section */
 		0BB20B3348A5B04EF9882506 /* TranquiTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TranquiTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		18E476971D3C9E0EAB49F55A /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
+		2C7F95D249CF8EDFCA41D75A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		4704AAD079F1BE42208DD025 /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pt; path = pt.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4845F5B919453845074D7BC3 /* Tranqui.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tranqui.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		6306A2BE9C1684BA9418BBF4 /* LaunchSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSmokeTests.swift; sourceTree = "<group>"; };
 		692440EA8FA22B66747BCE05 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7E5C943B16A0B544C4892340 /* TranquiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranquiApp.swift; sourceTree = "<group>"; };
+		AF204D1AB0A521E67A331953 /* HomeSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSmokeTests.swift; sourceTree = "<group>"; };
+		B2B0DCFC7EE60458C28118BC /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		CC2FB229F79C8E5B069C1190 /* TranquiUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TranquiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF107937C3C937BA55CE000D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		DD206CA431C145F98478CCA3 /* HomeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModelTests.swift; sourceTree = "<group>"; };
+		F840AAEA2345DC777F1AB89F /* HomeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -46,6 +54,8 @@
 			children = (
 				692440EA8FA22B66747BCE05 /* ContentView.swift */,
 				7E5C943B16A0B544C4892340 /* TranquiApp.swift */,
+				817A2D6C1924BD943ADDCB06 /* Features */,
+				B79226EBB3D365B0CC90A39C /* Resources */,
 			);
 			path = Tranqui;
 			sourceTree = "<group>";
@@ -58,6 +68,14 @@
 				CC2FB229F79C8E5B069C1190 /* TranquiUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		39D2FFD5EC838B05CFA3EE37 /* CheckIn */ = {
+			isa = PBXGroup;
+			children = (
+				DD206CA431C145F98478CCA3 /* HomeModelTests.swift */,
+			);
+			path = CheckIn;
 			sourceTree = "<group>";
 		};
 		62479D33C1ACC39C276DF619 = {
@@ -73,15 +91,40 @@
 		7C540B5C80FE1F1EE2A6F0D8 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				18E476971D3C9E0EAB49F55A /* SmokeTests.swift */,
+				39D2FFD5EC838B05CFA3EE37 /* CheckIn */,
 			);
 			path = Tests;
+			sourceTree = "<group>";
+		};
+		817A2D6C1924BD943ADDCB06 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				C02D255C407E53EAB0A91B30 /* CheckIn */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		B79226EBB3D365B0CC90A39C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EE2260895D085A2A6C908804 /* Localizable.strings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		C02D255C407E53EAB0A91B30 /* CheckIn */ = {
+			isa = PBXGroup;
+			children = (
+				F840AAEA2345DC777F1AB89F /* HomeModel.swift */,
+				CF107937C3C937BA55CE000D /* HomeView.swift */,
+			);
+			path = CheckIn;
 			sourceTree = "<group>";
 		};
 		FDB2C44EE3E8397605B49829 /* UITests */ = {
 			isa = PBXGroup;
 			children = (
-				6306A2BE9C1684BA9418BBF4 /* LaunchSmokeTests.swift */,
+				AF204D1AB0A521E67A331953 /* HomeSmokeTests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -112,6 +155,7 @@
 			buildConfigurationList = 16AEF2CBACC8B1DE2E1F4C9D /* Build configuration list for PBXNativeTarget "Tranqui" */;
 			buildPhases = (
 				5A1C8F014B46A61F442952DD /* Sources */,
+				680FF80D5F59E703DB305CEA /* Resources */,
 			);
 			buildRules = (
 			);
@@ -161,7 +205,9 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
+				en,
 				es,
+				pt,
 			);
 			mainGroup = 62479D33C1ACC39C276DF619;
 			minimizedProjectReferenceProxies = 1;
@@ -177,12 +223,23 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		680FF80D5F59E703DB305CEA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FDA8771BC425D8CE5B09D1E4 /* Localizable.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		07654A1A6FDB5EC1A4B6855F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D22E62042BF881F20BFD35E6 /* LaunchSmokeTests.swift in Sources */,
+				8FBECA54FA5BB20C437F25AC /* HomeSmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -191,6 +248,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8B53C09A16165213C97516E4 /* ContentView.swift in Sources */,
+				BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */,
+				8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */,
 				E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -199,7 +258,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				80F3733B352C7675E213100E /* SmokeTests.swift in Sources */,
+				0A55CD642199CC93D87C1D68 /* HomeModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +276,19 @@
 			targetProxy = BBC53E6E520CCF462FFA2287 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		EE2260895D085A2A6C908804 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				2C7F95D249CF8EDFCA41D75A /* en */,
+				B2B0DCFC7EE60458C28118BC /* es */,
+				4704AAD079F1BE42208DD025 /* pt */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		19402081ED48819C51855B47 /* Debug */ = {
