@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -23,7 +24,13 @@ func (c *fakeClock) Now() time.Time { return c.now }
 
 func testEngine(p *dbtest.Pool, now time.Time) (*escalation.Engine, *fakeClock) {
 	clock := &fakeClock{now: now}
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	out := io.Writer(io.Discard)
+	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
+	if os.Getenv("ESCALATION_TEST_LOG") != "" {
+		out = os.Stderr
+		opts = &slog.HandlerOptions{Level: slog.LevelDebug}
+	}
+	log := slog.New(slog.NewTextHandler(out, opts))
 	return escalation.New(p.Pool, clock, log), clock
 }
 

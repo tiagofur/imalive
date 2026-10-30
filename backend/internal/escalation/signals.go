@@ -16,15 +16,19 @@ const (
 )
 
 // SignalReceivedTx records the life signal inside the CALLER's transaction
-// (the check-in handler): every pending job of the user is cancelled
-// atomically with the signal (motor-escalada.md §Cola de trabajo — the
-// cancellation must never race the ladder, nor outlive a rolled-back
-// check-in). The signal itself is evidence even with nothing to cancel.
+// (the check-in handler): every pending job of the user is cancelled and any
+// open incident closes — resolved when a contact claimed it, false alarm
+// otherwise — with an "all clear" to the circle, all atomically with the
+// signal (motor-escalada.md §Cola de trabajo + §Máquina de estados del
+// incidente). The signal itself is evidence even with nothing to cancel.
 func (e *Engine) SignalReceivedTx(ctx context.Context, tx pgx.Tx, userID uuid.UUID, cycleDate pgtype.Date) error {
 	q := e.store.WithTx(tx)
 	n, err := q.CancelPendingJobsByUser(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("cancel pending jobs: %w", err)
+	}
+	if err := e.closeIncidentForSignal(ctx, q, userID); err != nil {
+		return fmt.Errorf("close incident: %w", err)
 	}
 	return insertAudit(ctx, q, auditParams{
 		UserID: userID, CycleDate: cycleDate, Kind: AuditSignalReceived,
