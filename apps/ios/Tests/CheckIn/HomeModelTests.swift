@@ -7,11 +7,16 @@ struct HomeModelTests {
     /// A repo the tests control: fixed values or an explosion.
     private struct FixedRepo: ProfileRepository {
         let profile: Profile
-        func profile() async throws -> Profile { profile }
+
+        func profile() async throws -> Profile {
+            profile
+        }
     }
 
     private struct ExplodingRepo: ProfileRepository {
-        func profile() async throws -> Profile { throw URLError(.notConnectedToInternet) }
+        func profile() async throws -> Profile {
+            throw URLError(.notConnectedToInternet)
+        }
     }
 
     @Test func stateStartsPendingAtNineToday() {
