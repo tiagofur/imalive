@@ -58,7 +58,7 @@ El worker corre `engine.ProcessTick` cada 30 s (el tick fija la granularidad del
 | `escalation: job frozen by pause` | info | rung cancelado porque la pausa aterrizó en carrera |
 | `escalation: job failed permanently` | **error** | dead-letter tras 3 intentos — crítico, ver SLO "Jobs failed" |
 
-- La **evidencia completa** vive en `audit_events` (append-only, sin UPDATE/DELETE): `cycle.opened`, `ladder.notified` (quién fue notificado, con qué contenido, cuándo), `signal.received`, `pause.activated`, `ladder.frozen_by_pause`, `job.failed`. Es la fuente forense de "notificamos o no" — se consulta, nunca se borra.
+- La **evidencia completa** vive en `audit_events` (append-only, sin UPDATE/DELETE): `cycle.opened`, `ladder.notified` (quién fue notificado, con qué contenido, cuándo), `signal.received`, `pause.activated`, `ladder.frozen_by_pause`, `job.failed` — y los del incidente (#55): `incident.opened`, `incident.claimed`, `incident.circle_notified`, `incident.closed`. Es la fuente forense de "notificamos o no" — se consulta, nunca se borra.
 - El outbox (`outbox_event.state='pending'`, edad = `now - created_at`) es la cola que drena el dispatcher (#57): edad > 5 min = crítico.
 
 ## Dashboards mínimos (staging y prod)

@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-30 (issue #55, week 2)
+
+- Additive (R-08/R-09 incidente + alerta web): `GET /v1/incidents/current`
+  (estado de la máquina de incidentes para la app del usuario; `204` si no
+  hay incidentes) y schema `IncidentCurrent`. La página web
+  "Voy yo / No puedo" viaja en el payload del outbox (magic link firmado),
+  no en este contrato. No breaking changes (oasdiff clean).
+
 ## [0.2.0] — 2026-10-30 (issue #53, week 2)
 
 - Additive (R-11 pause/viaje): `PUT /v1/me/pause` (freeze the ladder until
