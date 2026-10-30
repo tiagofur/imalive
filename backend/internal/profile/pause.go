@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/tiagofur/imalive/backend/internal/auth"
@@ -13,9 +14,18 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/httpapi"
 )
 
+// LadderFreezer cancels the user's pending ladder jobs when the pause goes
+// live, inside the SAME transaction as the pause write (R-11: the ladder
+// freezes atomically — no rung fires after the pause is set). Implemented by
+// the escalation engine; nil only in tests without an engine.
+type LadderFreezer interface {
+	PauseActivatedTx(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error
+}
+
 // SetPause activates the pause/viaje mode (R-11): the escalation ladder
 // freezes until the given instant (must be an RFC 3339 instant in the
-// future). The streak freezes instead of breaking while the pause is live.
+// future). The pause write and the cancellation of pending jobs share one
+// transaction: a pause without the freeze (or the reverse) is impossible.
 func (h *Handlers) SetPause(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Until time.Time `json:"until"`
@@ -30,9 +40,17 @@ func (h *Handlers) SetPause(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := uuid.MustParse(auth.UserIDFromContext(r.Context()))
-	err := h.users.SetUserPause(r.Context(), authstore.SetUserPauseParams{
-		ID:         uid,
-		PauseUntil: pgtype.Timestamptz{Time: body.Until.UTC(), Valid: true},
+	err := inTx(r.Context(), h.pool, func(ctx context.Context, tx pgx.Tx) error {
+		if err := h.users.WithTx(tx).SetUserPause(ctx, authstore.SetUserPauseParams{
+			ID:         uid,
+			PauseUntil: pgtype.Timestamptz{Time: body.Until.UTC(), Valid: true},
+		}); err != nil {
+			return err
+		}
+		if h.freezer != nil {
+			return h.freezer.PauseActivatedTx(ctx, tx, uid)
+		}
+		return nil
 	})
 	if err != nil {
 		internal(w, r, err)

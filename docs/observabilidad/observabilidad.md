@@ -1,6 +1,6 @@
 # Observabilidad
 
-> Última actualización: 2026-10-27. Si el motor de escalada se retrasa y nadie se entera, el producto falla en silencio. La observabilidad no es opcional: es parte del requisito.
+> Última actualización: 2026-10-30. Si el motor de escalada se retrasa y nadie se entera, el producto falla en silencio. La observabilidad no es opcional: es parte del requisito.
 
 ## Pilares
 
@@ -46,6 +46,20 @@ Los [gates del MVP](../producto/vision.md) se exponen como métricas y dashboard
 
 - El **heartbeat del motor** es la alerta más importante del sistema: "hay trabajo vencido sin procesar" detecta worker caído, BD bloqueada o tick muerto. Nada más importa si esto suena.
 - Sentry en apps: release tracking (cada build etiquetada), crash-free sessions, breadcrumbs de red (sin PII).
+
+### Motor de escalada en marcha (R-07, issue #54)
+
+El worker corre `engine.ProcessTick` cada 30 s (el tick fija la granularidad del SLO de retraso: p95 < 60 s = 2 ticks). Cada evento de negocio sale en el log estructurado con `user_id`/`job_id` para graficar:
+
+| Evento log | Nivel | Significado |
+|---|---|---|
+| `escalation: cycle opened` | info | ciclo diario abierto (escalera agendada) |
+| `escalation: job scheduled for retry` | warn | reintento con backoff (contar como tasa de fallo) |
+| `escalation: job frozen by pause` | info | rung cancelado porque la pausa aterrizó en carrera |
+| `escalation: job failed permanently` | **error** | dead-letter tras 3 intentos — crítico, ver SLO "Jobs failed" |
+
+- La **evidencia completa** vive en `audit_events` (append-only, sin UPDATE/DELETE): `cycle.opened`, `ladder.notified` (quién fue notificado, con qué contenido, cuándo), `signal.received`, `pause.activated`, `ladder.frozen_by_pause`, `job.failed`. Es la fuente forense de "notificamos o no" — se consulta, nunca se borra.
+- El outbox (`outbox_event.state='pending'`, edad = `now - created_at`) es la cola que drena el dispatcher (#57): edad > 5 min = crítico.
 
 ## Dashboards mínimos (staging y prod)
 
