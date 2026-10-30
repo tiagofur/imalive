@@ -15,6 +15,8 @@ import (
 
 	"github.com/tiagofur/imalive/backend/internal/auth"
 	authstore "github.com/tiagofur/imalive/backend/internal/auth/store"
+	"github.com/tiagofur/imalive/backend/internal/circle"
+	circlestore "github.com/tiagofur/imalive/backend/internal/circle/store"
 	"github.com/tiagofur/imalive/backend/internal/platform/config"
 	"github.com/tiagofur/imalive/backend/internal/platform/db"
 	"github.com/tiagofur/imalive/backend/internal/platform/healthz"
@@ -22,6 +24,7 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/httpserver"
 	"github.com/tiagofur/imalive/backend/internal/platform/lifecycle"
 	"github.com/tiagofur/imalive/backend/internal/platform/logging"
+	"github.com/tiagofur/imalive/backend/internal/platform/msg"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
 	"github.com/tiagofur/imalive/backend/internal/profile"
 )
@@ -78,10 +81,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	// Messaging for user-facing texts (welcome, R-03): sandbox locally; the
+	// Twilio Messaging side arrives with issue #6 credentials.
+	var msgNotifier msg.Notifier = msg.NoopNotifier{}
+	if cfg.OtpSender == "sandbox" {
+		msgNotifier = msg.NewSandboxNotifier("")
+	}
 
 	authService := auth.NewService(otp.NewStore(rdb, cfg.OtpSecret), sender, rdb,
 		authstore.New(pool), cfg.OtpSecret)
 	authHandlers := auth.NewHandlers(authService, auth.NewRateLimiter(rdb))
+	circleHandlers := circle.NewHandlers(circlestore.New(pool), msgNotifier)
 	profileHandlers := profile.NewHandlers(authstore.New(pool))
 	authMW := auth.NewMiddleware(authService)
 
@@ -94,6 +104,7 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthz.New(cfg.Version))
 	authHandlers.Register(mux)
+	circleHandlers.Register(mux, authMW)
 	profileHandlers.Register(mux, authMW)
 	// Chain order per docs/stack/backend-go.md, outermost first:
 	// request-id -> request-logging -> recovery. Request-logging wraps
