@@ -93,6 +93,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      APP_ENV: local
       DATABASE_URL: postgres://imalive:imalive@localhost:5432/imalive?sslmode=disable
     steps:
       - uses: actions/checkout@v4
