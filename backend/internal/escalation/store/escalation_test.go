@@ -333,3 +333,29 @@ func pgUUID(u uuid.UUID) pgtype.UUID { return pgtype.UUID{Bytes: u, Valid: true}
 func pgDate(t time.Time) pgtype.Date { return pgtype.Date{Time: t, Valid: true} }
 
 func pgTz(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: true} }
+
+func TestSosJobUniqueness(t *testing.T) {
+	ctx := context.Background()
+	p := dbtest.New(t)
+	q := store.New(p.Pool)
+	now := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
+	cycle := pgDate(date(2026, 10, 30))
+
+	userID := p.SeedUser("+5215515000001")
+	// The ladder keeps its uniqueness per cycle...
+	createJob(t, q, userID, cycle, "reminder_soft", now)
+	_, err := p.Pool.Exec(ctx, `INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
+		VALUES ($1, $2, $3, 'reminder_soft', $4)`, mustUUID(t), userID, cycle, pgTz(now))
+	assertPgCode(t, err, "23505", "ladder stays unique per cycle")
+
+	// ...but a second SOS the same day is an emergency, not a duplicate.
+	for i := 0; i < 2; i++ {
+		if _, err := p.Pool.Exec(ctx, `INSERT INTO escalation_jobs (id, user_id, cycle_date, kind, run_at)
+			VALUES ($1, $2, $3, 'sos_alert', $4)`, mustUUID(t), userID, cycle, pgTz(now.Add(time.Duration(i)*time.Minute))); err != nil {
+			t.Fatalf("sos insert %d: %v", i+1, err)
+		}
+	}
+	if n := countRows(t, p, `SELECT count(*) FROM escalation_jobs WHERE user_id = $1 AND kind = 'sos_alert'`, userID); n != 2 {
+		t.Fatalf("sos rows = %d, want 2 (the partial unique exempts sos_alert)", n)
+	}
+}
