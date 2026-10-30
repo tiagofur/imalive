@@ -28,6 +28,7 @@ import (
 	"github.com/tiagofur/imalive/backend/internal/platform/logging"
 	"github.com/tiagofur/imalive/backend/internal/platform/msg"
 	"github.com/tiagofur/imalive/backend/internal/platform/otp"
+	"github.com/tiagofur/imalive/backend/internal/profile"
 )
 
 // version is injected at build time: go build -ldflags "-X main.version=vX.Y.Z".
@@ -94,6 +95,8 @@ func run() error {
 	authHandlers := auth.NewHandlers(authService, auth.NewRateLimiter(rdb))
 	circleHandlers := circle.NewHandlers(circlestore.New(pool), msgNotifier)
 	checkinHandlers := checkin.NewHandlers(checkinstore.New(pool))
+	profileHandlers := profile.NewHandlers(authstore.New(pool))
+	authMW := auth.NewMiddleware(authService)
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", ":"+cfg.Port)
@@ -104,8 +107,9 @@ func run() error {
 	mux := http.NewServeMux()
 	mux.Handle("GET /healthz", healthz.New(cfg.Version))
 	authHandlers.Register(mux)
-	circleHandlers.Register(mux, auth.NewMiddleware(authService))
-	checkinHandlers.Register(mux, auth.NewMiddleware(authService))
+	circleHandlers.Register(mux, authMW)
+	profileHandlers.Register(mux, authMW)
+	checkinHandlers.Register(mux, authMW)
 	// Chain order per docs/stack/backend-go.md, outermost first:
 	// request-id -> request-logging -> recovery. Request-logging wraps
 	// recovery so the per-request record carries the true 500 of a panic,
