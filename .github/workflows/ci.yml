@@ -45,11 +45,13 @@ jobs:
             changed="$(git diff --name-only "origin/$BASE_REF...$SHA")"
           elif git cat-file -e "$BEFORE" 2>/dev/null; then
             changed="$(git diff --name-only "$BEFORE" "$SHA")"
-          elif git rev-parse -q --verify "$SHA^" >/dev/null 2>&1; then
-            changed="$(git diff --name-only "$SHA^" "$SHA")"
           else
+            # Sin BEFORE alcanzable (force-push: el tip viejo desapareció, o
+            # push inicial): un diff solo-tip ($SHA^..$SHA) se salta en
+            # silencio los commits no-tip — sobre-disparar en su lugar
+            # (issue #35: el coste macOS es preferible al job perdido).
             changed=""
-            changed_all=true # primer commit: todo es nuevo
+            changed_all=true # primer commit o force-push: todo es nuevo
           fi
           ios_changed=false
           if [ "$changed_all" = "true" ] || printf '%s\n' "$changed" | grep -qE '^(apps/ios/|\.github/workflows/)'; then
@@ -160,8 +162,12 @@ jobs:
         working-directory: apps/ios
     steps:
       - uses: actions/checkout@v4
+      # brew update refreshes the formula index so install takes the latest
+      # stable (the runner's preinstalled swiftformat can lag the docs pin;
+      # issue #35, run 41000286081). The docs pin (docs/stack/ios.md) is the
+      # reference version; bumps land as PRs when the brew stable moves.
       - name: Install tooling (xcodegen, SwiftLint, SwiftFormat)
-        run: brew install xcodegen swiftlint swiftformat
+        run: brew update && brew install xcodegen swiftlint swiftformat
       - name: Ensure an iPhone 16 simulator exists (image drift guard)
         run: |
           if ! xcrun simctl list devices | grep -q "iPhone 16 ("; then
