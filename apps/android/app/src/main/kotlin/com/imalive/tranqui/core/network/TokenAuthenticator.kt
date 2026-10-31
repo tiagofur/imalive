@@ -54,7 +54,9 @@ class TokenAuthenticator
         }
 
         /** The stale access token of the failed request, if it carried one. */
-        private fun staleAccess(response: Response): String? = response.request.header("Authorization")?.removePrefix(BEARER_PREFIX)
+        private fun staleAccess(response: Response): String? {
+            return response.request.header("Authorization")?.removePrefix(BEARER_PREFIX)
+        }
 
         /** The single-flight rotate-and-retry, or null when the session is dead. */
         private fun retryWithRotatedSession(

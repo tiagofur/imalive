@@ -29,7 +29,9 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideLoggingInterceptor(): HttpLoggingInterceptor = ApiClientFactory.loggingInterceptor(debug = BuildConfig.DEBUG)
+    fun provideLoggingInterceptor(): HttpLoggingInterceptor {
+        return ApiClientFactory.loggingInterceptor(debug = BuildConfig.DEBUG)
+    }
 
     @Provides
     @Singleton
