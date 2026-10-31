@@ -12,6 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.logging.HttpLoggingInterceptor.Level
 import retrofit2.Retrofit
 import javax.inject.Singleton
 
@@ -30,7 +31,11 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor {
-        return ApiClientFactory.loggingInterceptor(debug = BuildConfig.DEBUG)
+        // Body of two statements on purpose: a single-return block makes
+        // ktlint demand an expression body whose joined line then trips
+        // detekt's MaxLineLength (issue #75 slice 1 review).
+        val level = if (BuildConfig.DEBUG) Level.BODY else Level.NONE
+        return HttpLoggingInterceptor().apply { this.level = level }
     }
 
     @Provides

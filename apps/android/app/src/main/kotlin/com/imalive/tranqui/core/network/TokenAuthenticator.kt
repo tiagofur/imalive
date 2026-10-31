@@ -50,12 +50,12 @@ class TokenAuthenticator
             // fresh token means the session is dead server-side.
             val refreshable = !path.contains(AUTH_PATH_SEGMENT) && responseCount(response) < 2
             if (!refreshable) return null
-            return retryWithRotatedSession(response, staleAccess(response))
-        }
-
-        /** The stale access token of the failed request, if it carried one. */
-        private fun staleAccess(response: Response): String? {
-            return response.request.header("Authorization")?.removePrefix(BEARER_PREFIX)
+            // The stale access token of the failed request, if it carried one.
+            val staleAccess =
+                response.request
+                    .header("Authorization")
+                    ?.removePrefix(BEARER_PREFIX)
+            return retryWithRotatedSession(response, staleAccess)
         }
 
         /** The single-flight rotate-and-retry, or null when the session is dead. */
