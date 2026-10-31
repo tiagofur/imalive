@@ -59,7 +59,8 @@ class ProblemEnvelopeTest {
     fun `a business code the client does not know yet maps to UNKNOWN`() {
         val body =
             """
-            {"type":"https://api.tranqui.app/problems/future","title":"Future",
+            {"type":"https://api.tranqui.app/problems/future",
+             "title":"Future",
              "status":422,"code":"SOME_FUTURE_CODE"}
             """.trimIndent()
 

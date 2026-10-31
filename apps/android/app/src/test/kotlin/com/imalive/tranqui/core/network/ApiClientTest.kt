@@ -133,7 +133,8 @@ class ApiClientTest {
             val error =
                 assertThrows(ApiError::class.java) {
                     runBlocking {
-                        apiCall<Tokens>(json) { api().verifyOtp(OtpVerify(phone = "+5215512345678", code = "111111")) }
+                        val call = api().verifyOtp(OtpVerify(phone = "+5215512345678", code = "111111"))
+                        apiCall<Tokens>(json) { call }
                     }
                 }
 

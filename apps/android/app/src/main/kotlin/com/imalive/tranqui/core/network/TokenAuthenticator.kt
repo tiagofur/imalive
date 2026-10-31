@@ -50,20 +50,31 @@ class TokenAuthenticator
             // fresh token means the session is dead server-side.
             val refreshable = !path.contains(AUTH_PATH_SEGMENT) && responseCount(response) < 2
             if (!refreshable) return null
+            return retryWithRotatedSession(response, staleAccess(response))
+        }
 
-            val staleToken = response.request.header("Authorization")?.removePrefix(BEARER_PREFIX)
+        /** The stale access token of the failed request, if it carried one. */
+        private fun staleAccess(response: Response): String? =
+            response.request.header("Authorization")?.removePrefix(BEARER_PREFIX)
+
+        /** The single-flight rotate-and-retry, or null when the session is dead. */
+        private fun retryWithRotatedSession(
+            response: Response,
+            staleAccess: String?,
+        ): Request? {
             // OkHttp's Authenticator is synchronous; the single-flight refresh
             // blocks this request's thread only, on the 401 path (never on the
             // happy path).
             val session =
                 runBlocking {
                     refreshMutex.withLock {
-                        val current = sessions.cachedSession() ?: return@withLock null
-                        if (staleToken != null && current.accessToken != staleToken) {
+                        val current = sessions.cachedSession()
+                        when {
+                            current == null -> null
                             // Another thread already rotated while we waited.
-                            return@withLock current
+                            staleAccess != null && current.accessToken != staleAccess -> current
+                            else -> rotate(current)
                         }
-                        rotate(current)
                     }
                 }
             return session?.let { refreshed ->

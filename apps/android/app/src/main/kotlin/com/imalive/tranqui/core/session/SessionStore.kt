@@ -103,15 +103,15 @@ class DataStoreSessionStore
             val access = prefs[ACCESS_TOKEN]
             val refresh = prefs[REFRESH_TOKEN]
             // A session exists only with both tokens present.
-            return if (access == null || refresh == null) {
-                null
-            } else {
-                StoredSession(
-                    accessToken = access,
-                    refreshToken = refresh,
-                    expiresAtEpochSeconds = prefs[EXPIRES_AT] ?: 0L,
-                    userPhone = prefs[USER_PHONE],
-                )
+            return when {
+                access == null || refresh == null -> null
+                else ->
+                    StoredSession(
+                        accessToken = access,
+                        refreshToken = refresh,
+                        expiresAtEpochSeconds = prefs[EXPIRES_AT] ?: 0L,
+                        userPhone = prefs[USER_PHONE],
+                    )
             }
         }
 
