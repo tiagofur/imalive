@@ -3,3 +3,9 @@
 "checkin.cta" = "I'm OK";
 
 "home.next_checkin" = "Next check-in: %@";
+
+/* Streak the user is protecting (R-12): shown next to the CTA. */
+"home.streak_days" = "%d days in a row 🔥";
+
+/* Frozen while the pause mode is live (R-11: the value does not change). */
+"home.streak_frozen" = "Pause on · streak frozen";
