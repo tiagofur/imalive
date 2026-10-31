@@ -100,14 +100,19 @@ class DataStoreSessionStore
         }
 
         private fun fromPreferences(prefs: Preferences): StoredSession? {
-            val access = prefs[ACCESS_TOKEN] ?: return null
-            val refresh = prefs[REFRESH_TOKEN] ?: return null
-            return StoredSession(
-                accessToken = access,
-                refreshToken = refresh,
-                expiresAtEpochSeconds = prefs[EXPIRES_AT] ?: 0L,
-                userPhone = prefs[USER_PHONE],
-            )
+            val access = prefs[ACCESS_TOKEN]
+            val refresh = prefs[REFRESH_TOKEN]
+            // A session exists only with both tokens present.
+            return if (access == null || refresh == null) {
+                null
+            } else {
+                StoredSession(
+                    accessToken = access,
+                    refreshToken = refresh,
+                    expiresAtEpochSeconds = prefs[EXPIRES_AT] ?: 0L,
+                    userPhone = prefs[USER_PHONE],
+                )
+            }
         }
 
         private companion object {

@@ -57,7 +57,11 @@ class ProblemEnvelopeTest {
 
     @Test
     fun `a business code the client does not know yet maps to UNKNOWN`() {
-        val body = """{"type":"https://api.tranqui.app/problems/future","title":"Future","status":422,"code":"SOME_FUTURE_CODE"}"""
+        val body =
+            """
+            {"type":"https://api.tranqui.app/problems/future","title":"Future",
+             "status":422,"code":"SOME_FUTURE_CODE"}
+            """.trimIndent()
 
         val error = ProblemEnvelope.parse(json, httpStatus = 422, body = body)
 
@@ -79,7 +83,11 @@ class ProblemEnvelopeTest {
             ProblemEnvelope.parse(
                 json,
                 httpStatus = 429,
-                body = """{"type":"about:blank","title":"t","status":429,"code":"RATE_LIMITED"}""",
+                body =
+                    """
+                    {"type":"about:blank","title":"t","status":429,
+                     "code":"RATE_LIMITED"}
+                    """.trimIndent(),
                 retryAfterHeader = " in 2 minutes ",
             )
 
@@ -92,8 +100,14 @@ class ProblemEnvelopeTest {
         // Privacy: the message is what lands in crash reports and logs.
         val body =
             """
-            {"type":"https://api.tranqui.app/problems/phone-invalid","title":"Invalid phone number","status":400,
-            "detail":"Phone must be E.164, e.g. +5215512345678.","code":"PHONE_INVALID","instance":"/v1/auth/otp/request"}
+            {
+              "type": "https://api.tranqui.app/problems/phone-invalid",
+              "title": "Invalid phone number",
+              "status": 400,
+              "detail": "Phone must be E.164, e.g. +5215512345678.",
+              "code": "PHONE_INVALID",
+              "instance": "/v1/auth/otp/request"
+            }
             
             """.trimIndent()
 

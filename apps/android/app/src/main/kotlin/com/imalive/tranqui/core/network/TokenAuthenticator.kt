@@ -46,10 +46,10 @@ class TokenAuthenticator
             val path = response.request.url.encodedPath
             // A 401 of the auth endpoints themselves is terminal: never refresh
             // because of the refresh call (recursion guard) nor of a bad OTP.
-            if (path.contains(AUTH_PATH_SEGMENT)) return null
-            // Only one retry per original request: a second 401 with a fresh
-            // token means the session is dead server-side.
-            if (responseCount(response) >= 2) return null
+            // Only one retry per original request either: a second 401 with a
+            // fresh token means the session is dead server-side.
+            val refreshable = !path.contains(AUTH_PATH_SEGMENT) && responseCount(response) < 2
+            if (!refreshable) return null
 
             val staleToken = response.request.header("Authorization")?.removePrefix(BEARER_PREFIX)
             // OkHttp's Authenticator is synchronous; the single-flight refresh

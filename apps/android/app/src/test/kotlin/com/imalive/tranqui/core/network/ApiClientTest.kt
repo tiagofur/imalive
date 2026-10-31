@@ -132,7 +132,9 @@ class ApiClientTest {
 
             val error =
                 assertThrows(ApiError::class.java) {
-                    runBlocking { apiCall<Tokens>(json) { api().verifyOtp(OtpVerify(phone = "+5215512345678", code = "111111")) } }
+                    runBlocking {
+                        apiCall<Tokens>(json) { api().verifyOtp(OtpVerify(phone = "+5215512345678", code = "111111")) }
+                    }
                 }
 
             assertEquals(ApiErrorCode.OTP_EXPIRED, error.code)
