@@ -37,7 +37,7 @@
 
 ## Android — librerías autorizadas
 
-Jetpack: Compose, Material 3, Lifecycle/ViewModel, Navigation-Compose, Hilt, Coroutines/Flow, DataStore. Red: cliente generado OpenAPI + OkHttp + kotlinx.serialization. Notificaciones: FCM. Widgets (F2+): Glance. Build: Gradle KTS + version catalog (`libs.versions.toml`). Calidad: detekt + ktlint + lint de Compose. Detalles en [android.md](android.md).
+Jetpack: Compose, Material 3, Lifecycle/ViewModel, Navigation-Compose, Hilt, Coroutines/Flow, DataStore. Red: OkHttp + Retrofit + kotlinx.serialization con cliente fino del contrato (el cliente generado openapi-generator vuelve cuando la superficie supere ~15 operaciones; umbral en [android.md](android.md)). Notificaciones: FCM. Widgets (F2+): Glance. Build: Gradle KTS + version catalog (`libs.versions.toml`). Calidad: detekt + ktlint + lint de Compose. Detalles en [android.md](android.md).
 
 ## iOS — librerías autorizadas
 
