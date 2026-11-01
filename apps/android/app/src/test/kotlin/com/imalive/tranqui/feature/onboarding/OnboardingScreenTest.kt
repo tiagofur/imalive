@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.imalive.tranqui.core.designsystem.TranquiTheme
 import com.imalive.tranqui.core.network.ApiError
 import com.imalive.tranqui.core.network.ApiErrorCode
+import com.imalive.tranqui.core.network.FakeSessionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -47,7 +48,7 @@ class OnboardingScreenTest {
     }
 
     private fun setContent(auth: FakeAuth): OnboardingViewModel {
-        val viewModel = OnboardingViewModel(auth)
+        val viewModel = OnboardingViewModel(auth, FakeProfiles(), FakeSessionStore())
         composeRule.setContent {
             TranquiTheme {
                 OnboardingScreen(viewModel = viewModel)

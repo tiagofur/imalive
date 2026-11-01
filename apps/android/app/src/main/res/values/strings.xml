@@ -27,6 +27,24 @@
     <string name="onboarding_code_resend">Enviarlo de nuevo</string>
     <string name="onboarding_busy_sending_code">Enviando tu código…</string>
     <string name="onboarding_busy_verifying">Verificando…</string>
+    <!-- Paso 3: el ritual (nombre + hora + pre-permiso just-in-time, nunca
+         en frío). La zona horaria es la del dispositivo, sin edición. -->
+    <string name="onboarding_ritual_title">¿Cómo te llamas?</string>
+    <string name="onboarding_ritual_name_label">Tu nombre</string>
+    <string name="onboarding_ritual_name_error">Escríbenos tu nombre: así te llamará tu gente.</string>
+    <string name="onboarding_ritual_time_title">¿A qué hora te recordamos cada día?</string>
+    <string name="onboarding_ritual_time_sub">Te sugerimos las 21:00: una hora tranquila para avisar que el día cerró bien. Elige la tuya.</string>
+    <string name="onboarding_ritual_time_label">Tu hora de check-in</string>
+    <string name="onboarding_ritual_time_change">Cambiar</string>
+    <string name="onboarding_ritual_time_a11y">Elegir la hora del recordatorio. Actualmente %1$s.</string>
+    <string name="onboarding_ritual_time_ok">Aceptar</string>
+    <string name="onboarding_ritual_time_cancel">Cancelar</string>
+    <string name="onboarding_ritual_cta">Continuar</string>
+    <string name="onboarding_permission_title">Te avisaremos a las %1$s con una notificación tranquila. Nada de alarma.</string>
+    <string name="onboarding_permission_allow">Permitir notificaciones</string>
+    <string name="onboarding_permission_decline">Ahora no</string>
+    <string name="onboarding_permission_answered">Puedes activarla cuando quieras.</string>
+    <string name="onboarding_busy_saving">Guardando tus datos…</string>
     <!-- Errores por Problem.code (contrato v0.5.0): copy humano del brief,
          nunca el detail crudo. -->
     <string name="onboarding_error_phone_invalid">Ese teléfono no parece completo. Revísalo.</string>

@@ -11,3 +11,11 @@ naming:
   FunctionNaming:
     ignoreAnnotated:
       - 'Composable'
+
+# Stateless Compose screens take the UI state plus one callback per
+# interaction (the codebase's MVVM pattern); the parameter count is the
+# pattern, not a smell.
+complexity:
+  LongParameterList:
+    ignoreAnnotated:
+      - 'Composable'

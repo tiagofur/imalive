@@ -55,8 +55,8 @@ class HomeViewModel
             // authenticator (rejected refresh) walks them back. Token
             // rotations also emit here — they must not reload anything.
             viewModelScope.launch {
-                combine(sessions.session, sessions.onboardingComplete, ::Pair).collect {
-                    (session, complete) ->
+                combine(sessions.session, sessions.onboardingComplete, ::Pair).collect { pair ->
+                    val (session, complete) = pair
                     val gate = _uiState.value.gate
                     when {
                         (session == null || !complete) && gate != HomeGate.NEEDS_ONBOARDING ->
