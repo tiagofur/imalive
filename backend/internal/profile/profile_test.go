@@ -180,6 +180,11 @@ func TestProfileFlow(t *testing.T) {
 		if body["name"] != "Ana" || body["timezone"] != "America/Mexico_City" || body["checkinTime"] != "22:30" {
 			t.Fatalf("patched = %v", body)
 		}
+		// The contract's UserProfile requires streakDays on EVERY 200
+		// (issue #86: the PATCH response omitted it and broke v0.5.0 apps).
+		if _, ok := body["streakDays"]; !ok {
+			t.Fatalf("patched = %v, want streakDays present (required by the schema)", body)
+		}
 		if body["escalationWindowMinutes"] != float64(60) {
 			t.Fatalf("untouched field = %v, want 60 (omitted fields keep values)", body)
 		}
