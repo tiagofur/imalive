@@ -30,7 +30,6 @@ struct OtpRequestView: View {
             .onSubmit(model.requestCodeTapped)
             .accessibilityLabel(String(localized: "onboarding.phone_field_label"))
             .padding(.vertical, 12)
-            .padding(.top, 24)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(
@@ -38,6 +37,7 @@ struct OtpRequestView: View {
                         lineWidth: 1
                     )
             )
+            .padding(.top, 24)
             if let error = model.state.phoneError {
                 Text(Self.copy(for: error))
                     .font(DesignTokens.label)
