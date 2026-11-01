@@ -41,6 +41,13 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
+        } else {
+            // The arrival from onboarding (issue #75 slice 4): a streak at
+            // zero is a beginning, never a debt (brief, "la llegada").
+            Text(
+                text = stringResource(R.string.home_streak_zero),
+                style = MaterialTheme.typography.headlineSmall,
+            )
         }
         Text(
             text = stringResource(R.string.home_next_checkin, uiState.nextCheckinLabel),

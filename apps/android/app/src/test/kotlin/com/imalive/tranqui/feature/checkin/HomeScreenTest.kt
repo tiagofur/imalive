@@ -49,6 +49,20 @@ class HomeScreenTest {
     }
 
     @Test
+    fun theArrivalFromOnboardingReadsTheZeroAsABeginning() {
+        composeRule.setContent {
+            MaterialTheme {
+                HomeScreen(
+                    uiState = HomeUiState(nextCheckinLabel = "hoy 21:00", streakDays = 0),
+                    onCheckInClicked = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Tu racha empieza hoy.").assertIsDisplayed()
+    }
+
+    @Test
     fun aFrozenStreakSaysSo() {
         composeRule.setContent {
             MaterialTheme {
