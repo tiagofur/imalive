@@ -22,6 +22,7 @@ import com.imalive.tranqui.R
 // ("Paso N de 4"). Bienvenida is segment 1; the two OTP phases share
 // segment 2.
 @Composable
+@Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
 fun OnboardingProgress(
     currentStep: Int,
     modifier: Modifier = Modifier,

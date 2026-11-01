@@ -98,6 +98,7 @@ private val TranquiTypography =
 
 // Dark mode is mandatory (the nightly check-in is real, design-system.md).
 @Composable
+@Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
 fun TranquiTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,

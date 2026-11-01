@@ -22,6 +22,7 @@ import com.imalive.tranqui.core.designsystem.HeroButton
 // low voice under it — the first true thing the product says about itself
 // (voz baja, nunca un modal).
 @Composable
+@Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
 fun WelcomeScreen(
     onStartClicked: () -> Unit,
     modifier: Modifier = Modifier,

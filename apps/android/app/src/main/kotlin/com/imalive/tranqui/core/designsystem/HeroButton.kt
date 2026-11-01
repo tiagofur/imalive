@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 // per screen, pill radius, 56 dp tall (targets ≥ 48 dp). Home and onboarding
 // share it.
 @Composable
+@Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
 fun HeroButton(
     text: String,
     onClick: () -> Unit,
