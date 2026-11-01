@@ -7,6 +7,7 @@ import com.imalive.tranqui.core.network.ApiErrorCode
 import com.imalive.tranqui.core.network.dto.ProfilePatch
 import com.imalive.tranqui.core.session.SessionStore
 import com.imalive.tranqui.feature.checkin.AuthRepository
+import com.imalive.tranqui.feature.checkin.ContactsRepository
 import com.imalive.tranqui.feature.checkin.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -76,6 +77,16 @@ enum class RitualError {
     RETRY,
 }
 
+// The contact step's (paso 4) failures: the phone format is caught locally
+// (the brief's inline copy); the wire failures reuse the human offline/retry
+// copy. The quota (CONTACT_LIMIT_REACHED) is not an error — it resolves with
+// copy and a way home, never a paywall (R-13).
+enum class ContactError {
+    PHONE,
+    OFFLINE,
+    RETRY,
+}
+
 // Immutable, unidirectional: the screens render this and answer back through
 // the VM only. Phone/code drafts survive back and rotation because they live
 // here (plan of issue #75).
@@ -92,6 +103,16 @@ data class OnboardingUiState(
     // The just-in-time notification prompt (paso 3, API 33+) is answered
     // once; the card never re-asks (brief paso 3).
     val permissionAnswered: Boolean = false,
+    // The contact moment (paso 4): the draft survives back, rotation and
+    // error because it lives here.
+    val contactName: String = "",
+    val contactPhone: String = "",
+    val contactError: ContactError? = null,
+    // 201: the backend is sending the real welcome — the confirmation
+    // replaces the form.
+    val contactSent: Boolean = false,
+    // CONTACT_LIMIT_REACHED (free plan = 1 contact): copy, not a paywall.
+    val limitReached: Boolean = false,
     val busy: OnboardingBusy? = null,
     val phoneError: PhoneError? = null,
     val codeError: CodeError? = null,
@@ -115,6 +136,7 @@ class OnboardingViewModel
         private val auth: AuthRepository,
         private val profiles: ProfileRepository,
         private val sessions: SessionStore,
+        private val contacts: ContactsRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(OnboardingUiState())
         val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
@@ -197,6 +219,47 @@ class OnboardingViewModel
             saveRitual()
         }
 
+        // --- the contact moment (paso 4) ---
+
+        fun onContactNameChanged(raw: String) {
+            _uiState.update { it.copy(contactName = raw.take(MAX_NAME_LENGTH), contactError = null) }
+        }
+
+        fun onContactPhoneChanged(raw: String) {
+            // Same discipline as the user's own phone field.
+            val phone = raw.filter { it.isDigit() || it == '+' }
+            _uiState.update { it.copy(contactPhone = phone, contactError = null) }
+        }
+
+        fun onInviteAnotherClicked() {
+            _uiState.update {
+                it.copy(
+                    contactName = "",
+                    contactPhone = "",
+                    contactError = null,
+                    contactSent = false,
+                    limitReached = false,
+                )
+            }
+        }
+
+        fun onSendInviteClicked() {
+            val state = _uiState.value
+            if (state.busy != null || state.contactName.isBlank()) return
+            if (!E164.matches(state.contactPhone)) {
+                _uiState.update { it.copy(contactError = ContactError.PHONE) }
+                return
+            }
+            sendInvite()
+        }
+
+        // The honest ways out of the flow — the skip ("Lo haré después") and
+        // the post-send "Ir al inicio" — flip the persisted completion flag;
+        // the reactive gate then lands home.
+        fun onFinishClicked() {
+            viewModelScope.launch { sessions.completeOnboarding() }
+        }
+
         // Predictive back walks the linear machine backwards; the phone draft
         // survives, a half-written code does not (a stale code can only fail).
         fun onBack() {
@@ -214,7 +277,9 @@ class OnboardingViewModel
 
                 OnboardingStep.RITUAL -> _uiState.update { it.copy(step = OnboardingStep.CODE) }
 
-                else -> Unit // WELCOME leaves the app; CONTACT belongs to the same slice
+                OnboardingStep.CONTACT -> _uiState.update { it.copy(step = OnboardingStep.RITUAL) }
+
+                else -> Unit // WELCOME leaves the app
             }
         }
 
@@ -290,6 +355,31 @@ class OnboardingViewModel
                     // (name ≤ 80, HH:MM, a valid IANA zone); anything else
                     // asks for a retry in human words.
                     _uiState.update { it.copy(busy = null, ritualError = RitualError.RETRY) }
+                }
+            }
+        }
+
+        // The send hits POST /v1/contacts: the backend messages the contact
+        // (R-03) — the app never double-sends. The quota is a state, not an
+        // error; the offline draft stays for the retry and the manual
+        // WhatsApp fallback.
+        private fun sendInvite() {
+            val state = _uiState.value
+            viewModelScope.launch {
+                _uiState.update { it.copy(busy = OnboardingBusy.SENDING_INVITE, contactError = null) }
+                try {
+                    contacts.create(name = state.contactName.trim(), phone = state.contactPhone)
+                    _uiState.update { it.copy(busy = null, contactSent = true, limitReached = false) }
+                } catch (error: ApiError) {
+                    when (error.code) {
+                        ApiErrorCode.CONTACT_LIMIT_REACHED ->
+                            _uiState.update { it.copy(busy = null, limitReached = true) }
+
+                        else ->
+                            _uiState.update { it.copy(busy = null, contactError = ContactError.RETRY) }
+                    }
+                } catch (_: IOException) {
+                    _uiState.update { it.copy(busy = null, contactError = ContactError.OFFLINE) }
                 }
             }
         }

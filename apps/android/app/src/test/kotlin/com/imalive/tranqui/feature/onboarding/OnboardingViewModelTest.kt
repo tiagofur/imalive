@@ -3,13 +3,16 @@ package com.imalive.tranqui.feature.onboarding
 import com.imalive.tranqui.core.network.ApiError
 import com.imalive.tranqui.core.network.ApiErrorCode
 import com.imalive.tranqui.core.network.FakeSessionStore
+import com.imalive.tranqui.core.network.dto.Contact
 import com.imalive.tranqui.core.network.dto.ProfilePatch
 import com.imalive.tranqui.core.session.StoredSession
 import com.imalive.tranqui.feature.checkin.AuthRepository
+import com.imalive.tranqui.feature.checkin.ContactsRepository
 import com.imalive.tranqui.feature.checkin.Profile
 import com.imalive.tranqui.feature.checkin.ProfileRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
@@ -82,6 +85,33 @@ internal class FakeProfiles : ProfileRepository {
     }
 }
 
+// The circle seam the contact moment posts to (POST /v1/contacts).
+internal class FakeContacts : ContactsRepository {
+    var createCalls = 0
+        private set
+
+    var lastName: String? = null
+        private set
+
+    var lastPhone: String? = null
+        private set
+
+    var error: Exception? = null
+
+    override suspend fun contacts(): List<Contact> = emptyList()
+
+    override suspend fun create(
+        name: String,
+        phone: String,
+    ): Contact {
+        createCalls++
+        lastName = name
+        lastPhone = phone
+        error?.let { throw it }
+        return Contact(id = "01934f2f", name = name, phone = phone, createdAt = "2026-11-01T00:00:00Z")
+    }
+}
+
 // Criteria of issue #75 slice 3: the onboarding is a linear step machine on
 // one VM — steps advance and go back with drafts intact, the errors of the
 // contract map to human states (never the raw detail) and the resend
@@ -111,13 +141,14 @@ class OnboardingViewModelTest {
     }
 
     // The slice-3 machine ran on the auth seam alone; since slice 4 the VM
-    // also owns the profile (the ritual), the session (resume) and later the
-    // contacts. Tests default every seam to a fresh fake.
+    // also owns the profile (the ritual), the session (resume + completion)
+    // and the contacts. Tests default every seam to a fresh fake.
     private fun viewModel(
         auth: FakeAuth = FakeAuth(),
         profiles: FakeProfiles = FakeProfiles(),
         sessions: FakeSessionStore = FakeSessionStore(),
-    ): OnboardingViewModel = OnboardingViewModel(auth, profiles, sessions)
+        contacts: FakeContacts = FakeContacts(),
+    ): OnboardingViewModel = OnboardingViewModel(auth, profiles, sessions, contacts)
 
     // Drives the machine to the code phase the way the UI does.
     private fun OnboardingViewModel.reachCodePhase(auth: FakeAuth) {
@@ -538,5 +569,135 @@ class OnboardingViewModelTest {
             viewModel.onBack()
 
             assertEquals(OnboardingStep.CODE, viewModel.uiState.value.step)
+        }
+
+    // --- the contact moment (paso 4, slice 4) ---
+
+    // Drives the machine to the contact step the way the UI does.
+    private fun OnboardingViewModel.reachContact() {
+        reachRitual()
+        onRitualContinueClicked()
+    }
+
+    @Test
+    fun `the invite posts the name and the e164 phone and confirms`() =
+        runTest {
+            val contacts = FakeContacts()
+            val viewModel = viewModel(contacts = contacts)
+            viewModel.reachContact()
+            viewModel.onContactNameChanged("María")
+            viewModel.onContactPhoneChanged("+52 155 987 6543")
+
+            viewModel.onSendInviteClicked()
+
+            assertEquals(1, contacts.createCalls)
+            assertEquals("María", contacts.lastName)
+            assertEquals("+521559876543", contacts.lastPhone)
+            assertEquals(true, viewModel.uiState.value.contactSent)
+            assertNull(viewModel.uiState.value.busy)
+        }
+
+    @Test
+    fun `a phone without country never reaches the api and asks to complete it`() =
+        runTest {
+            val contacts = FakeContacts()
+            val viewModel = viewModel(contacts = contacts)
+            viewModel.reachContact()
+            viewModel.onContactNameChanged("María")
+            viewModel.onContactPhoneChanged("55 9876 5432")
+
+            viewModel.onSendInviteClicked()
+
+            assertEquals(ContactError.PHONE, viewModel.uiState.value.contactError)
+            assertEquals(0, contacts.createCalls)
+        }
+
+    @Test
+    fun `contact limit reached resolves with the copy state, not an error`() =
+        runTest {
+            val contacts = FakeContacts()
+            contacts.error = ApiError(ApiErrorCode.CONTACT_LIMIT_REACHED, httpStatus = 422)
+            val viewModel = viewModel(contacts = contacts)
+            viewModel.reachContact()
+            viewModel.onContactNameChanged("María")
+            viewModel.onContactPhoneChanged("+521559876543")
+
+            viewModel.onSendInviteClicked()
+
+            assertEquals(true, viewModel.uiState.value.limitReached)
+            assertEquals(false, viewModel.uiState.value.contactSent)
+            assertNull(viewModel.uiState.value.contactError)
+        }
+
+    @Test
+    fun `an offline invite keeps the draft and asks to retry`() =
+        runTest {
+            val contacts = FakeContacts()
+            contacts.error = IOException("network down")
+            val viewModel = viewModel(contacts = contacts)
+            viewModel.reachContact()
+            viewModel.onContactNameChanged("María")
+            viewModel.onContactPhoneChanged("+521559876543")
+
+            viewModel.onSendInviteClicked()
+
+            assertEquals(ContactError.OFFLINE, viewModel.uiState.value.contactError)
+            assertEquals("María", viewModel.uiState.value.contactName)
+            assertEquals("+521559876543", viewModel.uiState.value.contactPhone)
+            assertEquals(false, viewModel.uiState.value.contactSent)
+        }
+
+    @Test
+    fun `an unexpected business answer in the contact phase writes the contact slot`() =
+        runTest {
+            val contacts = FakeContacts()
+            contacts.error = ApiError(ApiErrorCode.VALIDATION_FAILED, httpStatus = 400)
+            val viewModel = viewModel(contacts = contacts)
+            viewModel.reachContact()
+            viewModel.onContactNameChanged("María")
+            viewModel.onContactPhoneChanged("+521559876543")
+
+            viewModel.onSendInviteClicked()
+
+            assertEquals(ContactError.RETRY, viewModel.uiState.value.contactError)
+        }
+
+    @Test
+    fun `inviting another clears the confirmation and the draft`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.reachContact()
+            viewModel.onContactNameChanged("María")
+            viewModel.onContactPhoneChanged("+521559876543")
+            viewModel.onSendInviteClicked()
+
+            viewModel.onInviteAnotherClicked()
+
+            assertEquals(false, viewModel.uiState.value.contactSent)
+            assertEquals("", viewModel.uiState.value.contactName)
+            assertEquals("", viewModel.uiState.value.contactPhone)
+        }
+
+    @Test
+    fun `the skip completes the onboarding so the gate lands home`() =
+        runTest {
+            val sessions = FakeSessionStore(savedSession)
+            val viewModel = viewModel(sessions = sessions)
+            viewModel.reachContact()
+
+            viewModel.onFinishClicked()
+
+            assertEquals(true, sessions.onboardingComplete.first())
+        }
+
+    @Test
+    fun `back from the contact step returns to the ritual`() =
+        runTest {
+            val viewModel = viewModel()
+            viewModel.reachContact()
+
+            viewModel.onBack()
+
+            assertEquals(OnboardingStep.RITUAL, viewModel.uiState.value.step)
         }
 }

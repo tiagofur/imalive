@@ -79,7 +79,15 @@ fun OnboardingScreen(
                 )
             }
 
-            OnboardingStep.CONTACT -> Unit
+            OnboardingStep.CONTACT ->
+                AddContactScreen(
+                    uiState = uiState,
+                    onContactNameChanged = viewModel::onContactNameChanged,
+                    onContactPhoneChanged = viewModel::onContactPhoneChanged,
+                    onSendInviteClicked = viewModel::onSendInviteClicked,
+                    onInviteAnotherClicked = viewModel::onInviteAnotherClicked,
+                    onFinishClicked = viewModel::onFinishClicked,
+                )
         }
     }
 }

@@ -2,10 +2,13 @@ package com.imalive.tranqui.feature.onboarding
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.imalive.tranqui.core.designsystem.TranquiTheme
 import org.junit.Assert.assertEquals
@@ -102,6 +105,12 @@ class CheckinTimeScreenTest {
         composeRule.onNodeWithText("Continuar").assertIsNotEnabled()
     }
 
+    // The card sits under the time section, below the fold of the smallest
+    // viewport: the test scrolls to it the way a thumb would.
+    private fun scrollToPermissionCard() {
+        composeRule.onNode(hasScrollAction()).performScrollToNode(hasText("Permitir notificaciones"))
+    }
+
     @Test
     fun thePermissionCardSpeaksBeforeTheCtaWithTheExactSlot() {
         setContent(
@@ -109,6 +118,7 @@ class CheckinTimeScreenTest {
             showPermissionCard = true,
         )
 
+        scrollToPermissionCard()
         composeRule
             .onNodeWithText("Te avisaremos a las 08:30 con una notificación tranquila. Nada de alarma.")
             .assertIsDisplayed()
@@ -120,6 +130,7 @@ class CheckinTimeScreenTest {
     fun onlyTheAllowActionFiresTheSystemPrompt() {
         setContent(showPermissionCard = true)
 
+        scrollToPermissionCard()
         composeRule.onNodeWithText("Ahora no").performClick()
 
         assertEquals(0, allowCalls)
@@ -130,6 +141,7 @@ class CheckinTimeScreenTest {
     fun theAllowActionLaunchesTheSystemPrompt() {
         setContent(showPermissionCard = true)
 
+        scrollToPermissionCard()
         composeRule.onNodeWithText("Permitir notificaciones").performClick()
 
         assertEquals(1, allowCalls)

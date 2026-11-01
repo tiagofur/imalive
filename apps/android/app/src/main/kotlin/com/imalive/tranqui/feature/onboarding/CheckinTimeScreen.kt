@@ -1,6 +1,5 @@
 package com.imalive.tranqui.feature.onboarding
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,11 +55,16 @@ fun CheckinTimeScreen(
     modifier: Modifier = Modifier,
 ) {
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column {
+    Column(modifier = modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+        // Scrollable content with the CTA pinned: the copy must survive the
+        // biggest font scale without breaking the layout (brief, WCAG AC).
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+        ) {
             Text(
                 text = stringResource(R.string.onboarding_ritual_title),
                 style = MaterialTheme.typography.headlineSmall,

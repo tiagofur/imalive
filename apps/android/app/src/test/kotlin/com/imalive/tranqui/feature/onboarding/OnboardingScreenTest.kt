@@ -14,6 +14,8 @@ import com.imalive.tranqui.core.network.ApiError
 import com.imalive.tranqui.core.network.ApiErrorCode
 import com.imalive.tranqui.core.network.FakeSessionStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -48,7 +50,8 @@ class OnboardingScreenTest {
     }
 
     private fun setContent(auth: FakeAuth): OnboardingViewModel {
-        val viewModel = OnboardingViewModel(auth, FakeProfiles(), FakeSessionStore())
+        val viewModel =
+            OnboardingViewModel(auth, FakeProfiles(), FakeSessionStore(), FakeContacts())
         composeRule.setContent {
             TranquiTheme {
                 OnboardingScreen(viewModel = viewModel)
@@ -108,5 +111,41 @@ class OnboardingScreenTest {
 
         assertEquals(1, auth.verifyCalls)
         assertEquals("+5215512345678", auth.lastVerifyPhone)
+    }
+
+    // The slice-4 closure: verify walks into the ritual, the ritual PATCHes
+    // and lands the contact moment, and the honest skip flips the persisted
+    // completion flag the gate waits for (HomeViewModelTest covers the home
+    // landing itself).
+    @Test
+    fun theFlowWalksThroughTheRitualIntoTheContactMomentAndSkipCompletesIt() {
+        val auth = FakeAuth()
+        val profiles = FakeProfiles()
+        val contacts = FakeContacts()
+        val sessions = FakeSessionStore()
+        val viewModel = OnboardingViewModel(auth, profiles, sessions, contacts)
+        composeRule.setContent {
+            TranquiTheme {
+                OnboardingScreen(viewModel = viewModel)
+            }
+        }
+
+        composeRule.onNodeWithText("Empezar").performClick()
+        composeRule.onNode(hasSetTextAction()).performTextInput("+5215512345678")
+        composeRule.onNodeWithText("Enviarme el código").performClick()
+        composeRule.onNode(hasSetTextAction()).performTextInput("482913")
+
+        composeRule.onNodeWithText("¿Cómo te llamas?").assertIsDisplayed()
+        composeRule.onNode(hasSetTextAction()).performTextInput("Ana")
+        composeRule
+            .onNodeWithContentDescription("Elegir la hora del recordatorio. Actualmente 21:00.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Continuar").performClick()
+
+        assertEquals(1, profiles.updateCalls)
+        composeRule.onNodeWithText("¿Quién te pregunta si llegaste bien?").assertIsDisplayed()
+        composeRule.onNodeWithText("Lo haré después").performClick()
+
+        assertEquals(true, runBlocking { sessions.onboardingComplete.first() })
     }
 }

@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- The manual WhatsApp invitation fallback (slice 4) needs package
+         visibility on API 30+; the contact picker needs nothing. -->
+    <queries>
+        <package android:name="com.whatsapp" />
+    </queries>
+
     <application
         android:name=".TranquiApplication"
         android:allowBackup="false"
