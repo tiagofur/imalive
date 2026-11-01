@@ -6,8 +6,12 @@
     <string name="home_next_checkin">Siguiente check-in: %1$s</string>
     <string name="home_streak_days">%1$d días seguidos 🔥</string>
     <string name="home_streak_frozen">Pausa activa · racha congelada</string>
-    <!-- Onboarding (issue #75). Copy del brief UX (paso 1, bienvenida);
-         el placeholder del gate del slice 2 ya usa el texto definitivo. -->
+    <!-- Onboarding (issue #75). Copy del brief UX. "Tranqui" es placeholder
+         del nombre de producto (#5): todo copy que dependa del nombre
+         interpola app_name — resolver #5 cambia un solo recurso. -->
     <string name="onboarding_welcome_title">Un toque al día para que los que te quieren sepan que estás bien.</string>
+    <string name="onboarding_welcome_sub">Si un día no confirmas, tu gente lo sabe al instante y alguien puede comprobar cómo estás.</string>
     <string name="onboarding_welcome_cta">Empezar</string>
+    <string name="onboarding_welcome_disclaimer">%1$s avisa a tu gente; no es un servicio de emergencia y no sustituye al 911/112.</string>
+    <string name="onboarding_progress_a11y">Paso %1$d de 4</string>
 </resources>
