@@ -26,6 +26,35 @@ enum Fixtures {
     }
     """
 
+    /// contracts/openapi.yaml: the UserProfile schema example with the active
+    /// pause (pauseUntil, R-11).
+    static let pausedProfile = """
+    {
+      "id": "01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f",
+      "name": "Ana",
+      "phone": "+5215512345678",
+      "checkinTime": "21:00",
+      "timezone": "America/Mexico_City",
+      "escalationWindowMinutes": 60,
+      "streakDays": 12,
+      "pauseUntil": "2026-11-15T06:00:00Z"
+    }
+    """
+
+    /// The same profile with a garbage timestamp where pauseUntil goes.
+    static let degradedPauseProfile = """
+    {
+      "id": "01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f",
+      "name": "Ana",
+      "phone": "+5215512345678",
+      "checkinTime": "21:00",
+      "timezone": "America/Mexico_City",
+      "escalationWindowMinutes": 60,
+      "streakDays": 12,
+      "pauseUntil": "the day after the pause started"
+    }
+    """
+
     static let rateLimitedProblem = """
     {
       "type": "https://api.tranqui.app/problems/rate-limited",
@@ -64,6 +93,49 @@ enum Fixtures {
       "date": "2026-10-28",
       "checkedInAt": "2026-10-28T07:58:00Z",
       "replayed": false
+    }
+    """
+
+    /// contracts/openapi.yaml, GET /contacts 200 example.
+    static let contactsList = """
+    {
+      "contacts": [
+        {
+          "id": "01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a",
+          "name": "María",
+          "phone": "+5215598765432",
+          "createdAt": "2026-10-20T15:30:00Z"
+        },
+        {
+          "id": "01934f30-9b3d-7e5f-b06b-3c4d5e6f7a8b",
+          "name": "Jorge",
+          "phone": "+5215511223344",
+          "createdAt": "2026-10-21T10:00:00Z"
+        }
+      ]
+    }
+    """
+
+    /// contracts/openapi.yaml, POST /contacts 201 example.
+    static let contact = """
+    {
+      "id": "01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a",
+      "name": "María",
+      "phone": "+5215598765432",
+      "createdAt": "2026-10-20T15:30:00Z"
+    }
+    """
+
+    /// contracts/openapi.yaml, POST /contacts 422 example (verbatim, the
+    /// Spanish detail included).
+    static let contactLimitProblem = """
+    {
+      "type": "https://api.tranqui.app/problems/contact-limit-reached",
+      "title": "Límite de contactos alcanzado",
+      "status": 422,
+      "detail": "El plan gratuito permite hasta 1 contacto. Actualiza a Premium.",
+      "code": "CONTACT_LIMIT_REACHED",
+      "instance": "/v1/contacts"
     }
     """
 }
@@ -178,6 +250,24 @@ struct TranquiAPITests {
         #expect(profile.streakDays == 12)
         #expect(profile.checkinTime == "21:00")
         #expect(StubURLProtocol.lastRequest?.headers["Authorization"] == "Bearer access-token-1")
+    }
+
+    @Test func getProfileDecodesTheActivePauseOfTheSchemaExample() async throws {
+        stub(200, Fixtures.pausedProfile)
+
+        let profile = try await makeAPI().getProfile()
+
+        let formatter = ISO8601DateFormatter()
+        #expect(profile.pauseUntil == formatter.date(from: "2026-11-15T06:00:00Z"))
+    }
+
+    @Test func getProfileReadsADegradedPauseUntilAsNoPause() async throws {
+        stub(200, Fixtures.degradedPauseProfile)
+
+        let profile = try await makeAPI().getProfile()
+
+        #expect(profile.streakDays == 12)
+        #expect(profile.pauseUntil == nil)
     }
 
     @Test func withoutASessionProtectedCallsGoOutAnonymousAnd401MapsToApiError() async throws {

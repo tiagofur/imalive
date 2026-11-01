@@ -11,10 +11,13 @@
 		0A55CD642199CC93D87C1D68 /* HomeModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD206CA431C145F98478CCA3 /* HomeModelTests.swift */; };
 		0C0781E1200802AD52AAFF35 /* InMemoryPersisting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E668640F614E0417E7D351D /* InMemoryPersisting.swift */; };
 		11DBEFF06CF535EC2B59D06D /* TranquiAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7DAD8C55EBD949A54ECCE6 /* TranquiAPI.swift */; };
+		29F6373951CA6E4ED2803D6E /* OnboardingPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C1195A1542E1D5F999985AF /* OnboardingPlaceholderView.swift */; };
 		3121B9587886832D88FFB80C /* KeychainSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E39757670328AAD27EF446D /* KeychainSessionStore.swift */; };
 		3E371D0B9211FE4FBAA9F7C8 /* TranquiAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A3A625E98A972A4F4AEEF7 /* TranquiAPITests.swift */; };
 		4F4A84871115138020BCA2E1 /* TokenRefresherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86274A6067D9503FE77A668 /* TokenRefresherTests.swift */; };
+		58B41B8FF90D65D1BC6B5BC0 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F902D7D99FEBE95027C97DC5 /* AuthRepository.swift */; };
 		61D9F53DA614AA9F48FC17F2 /* TokenRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804FD4772BAEFD3CEF1BB253 /* TokenRefresher.swift */; };
+		73C20490FDD9DCA289FF5B56 /* NetworkRepositoriesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8FC9AE53F1621DD5808809 /* NetworkRepositoriesTests.swift */; };
 		8B53C09A16165213C97516E4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692440EA8FA22B66747BCE05 /* ContentView.swift */; };
 		8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF107937C3C937BA55CE000D /* HomeView.swift */; };
 		8FBECA54FA5BB20C437F25AC /* HomeSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF204D1AB0A521E67A331953 /* HomeSmokeTests.swift */; };
@@ -26,6 +29,7 @@
 		D71206DDE86D1B09B25DA5DF /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D06B58E8C4C4BAF859F891 /* SessionStore.swift */; };
 		D8A068065ACDEB5653DEDEFE /* ApiError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B47ED367C19D5EE2A8197D /* ApiError.swift */; };
 		DFF0058ED22E65748CD02385 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD215F0557DFEEBB8439BB25 /* SessionStoreTests.swift */; };
+		E0BAD0363F0AFEACF1D88B0B /* ContactsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E252502522D72860AF93786 /* ContactsRepository.swift */; };
 		E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5C943B16A0B544C4892340 /* TranquiApp.swift */; };
 		FDA8771BC425D8CE5B09D1E4 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = EE2260895D085A2A6C908804 /* Localizable.strings */; };
 /* End PBXBuildFile section */
@@ -57,9 +61,12 @@
 		4704AAD079F1BE42208DD025 /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pt; path = pt.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4845F5B919453845074D7BC3 /* Tranqui.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tranqui.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		692440EA8FA22B66747BCE05 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		6C1195A1542E1D5F999985AF /* OnboardingPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPlaceholderView.swift; sourceTree = "<group>"; };
+		7B8FC9AE53F1621DD5808809 /* NetworkRepositoriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkRepositoriesTests.swift; sourceTree = "<group>"; };
 		7E5C943B16A0B544C4892340 /* TranquiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranquiApp.swift; sourceTree = "<group>"; };
 		804FD4772BAEFD3CEF1BB253 /* TokenRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefresher.swift; sourceTree = "<group>"; };
 		8E39757670328AAD27EF446D /* KeychainSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSessionStore.swift; sourceTree = "<group>"; };
+		9E252502522D72860AF93786 /* ContactsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsRepository.swift; sourceTree = "<group>"; };
 		9E668640F614E0417E7D351D /* InMemoryPersisting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryPersisting.swift; sourceTree = "<group>"; };
 		A86274A6067D9503FE77A668 /* TokenRefresherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefresherTests.swift; sourceTree = "<group>"; };
 		AD215F0557DFEEBB8439BB25 /* SessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStoreTests.swift; sourceTree = "<group>"; };
@@ -73,6 +80,7 @@
 		D3CA33BAED73D6F505578403 /* ProfileRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepository.swift; sourceTree = "<group>"; };
 		DD206CA431C145F98478CCA3 /* HomeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModelTests.swift; sourceTree = "<group>"; };
 		F840AAEA2345DC777F1AB89F /* HomeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModel.swift; sourceTree = "<group>"; };
+		F902D7D99FEBE95027C97DC5 /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
 		F9D06B58E8C4C4BAF859F891 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -112,6 +120,7 @@
 			isa = PBXGroup;
 			children = (
 				DD206CA431C145F98478CCA3 /* HomeModelTests.swift */,
+				7B8FC9AE53F1621DD5808809 /* NetworkRepositoriesTests.swift */,
 			);
 			path = CheckIn;
 			sourceTree = "<group>";
@@ -152,6 +161,8 @@
 			isa = PBXGroup;
 			children = (
 				C02D255C407E53EAB0A91B30 /* CheckIn */,
+				B01EC226BB08940BBE3DAE3D /* Circle */,
+				D91D40D609D7A8A2F5B659EE /* Onboarding */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -176,6 +187,14 @@
 			path = Session;
 			sourceTree = "<group>";
 		};
+		B01EC226BB08940BBE3DAE3D /* Circle */ = {
+			isa = PBXGroup;
+			children = (
+				9E252502522D72860AF93786 /* ContactsRepository.swift */,
+			);
+			path = Circle;
+			sourceTree = "<group>";
+		};
 		B79226EBB3D365B0CC90A39C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -187,11 +206,20 @@
 		C02D255C407E53EAB0A91B30 /* CheckIn */ = {
 			isa = PBXGroup;
 			children = (
+				F902D7D99FEBE95027C97DC5 /* AuthRepository.swift */,
 				F840AAEA2345DC777F1AB89F /* HomeModel.swift */,
 				CF107937C3C937BA55CE000D /* HomeView.swift */,
 				D3CA33BAED73D6F505578403 /* ProfileRepository.swift */,
 			);
 			path = CheckIn;
+			sourceTree = "<group>";
+		};
+		D91D40D609D7A8A2F5B659EE /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				6C1195A1542E1D5F999985AF /* OnboardingPlaceholderView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		DBB712E186370533D293188C /* Core */ = {
@@ -330,11 +358,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				D8A068065ACDEB5653DEDEFE /* ApiError.swift in Sources */,
+				58B41B8FF90D65D1BC6B5BC0 /* AuthRepository.swift in Sources */,
+				E0BAD0363F0AFEACF1D88B0B /* ContactsRepository.swift in Sources */,
 				8B53C09A16165213C97516E4 /* ContentView.swift in Sources */,
 				AD0CF5C625B5ACC36E45740A /* DTOs.swift in Sources */,
 				BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */,
 				8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */,
 				3121B9587886832D88FFB80C /* KeychainSessionStore.swift in Sources */,
+				29F6373951CA6E4ED2803D6E /* OnboardingPlaceholderView.swift in Sources */,
 				C3C1ACA0E34C2167D41E0FF9 /* ProfileRepository.swift in Sources */,
 				D71206DDE86D1B09B25DA5DF /* SessionStore.swift in Sources */,
 				ABEA844A5EB745EF83E2F58E /* StubURLProtocol.swift in Sources */,
@@ -352,6 +383,7 @@
 				0A55CD642199CC93D87C1D68 /* HomeModelTests.swift in Sources */,
 				0C0781E1200802AD52AAFF35 /* InMemoryPersisting.swift in Sources */,
 				076DB05A4C09813E06CFCDB8 /* KeychainSessionStoreTests.swift in Sources */,
+				73C20490FDD9DCA289FF5B56 /* NetworkRepositoriesTests.swift in Sources */,
 				DFF0058ED22E65748CD02385 /* SessionStoreTests.swift in Sources */,
 				4F4A84871115138020BCA2E1 /* TokenRefresherTests.swift in Sources */,
 				3E371D0B9211FE4FBAA9F7C8 /* TranquiAPITests.swift in Sources */,

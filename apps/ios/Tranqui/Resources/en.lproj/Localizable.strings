@@ -9,3 +9,8 @@
 
 /* Frozen while the pause mode is live (R-11: the value does not change). */
 "home.streak_frozen" = "Pause on · streak frozen";
+
+/* Onboarding (issue #76). The brief UX's paso-1 copy; the gate placeholder
+   of slice 2 already uses the definitive text. */
+"onboarding.welcome_title" = "One tap a day so the people who love you know you're okay.";
+"onboarding.welcome_cta" = "Get started";

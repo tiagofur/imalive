@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// R-04 (home = the button): one tap for "Estoy OK" plus the next-checkin
-/// status. F0 scaffold: static schedule, no navigation (docs/diseno/ux-movil.md).
+/// status and the streak the user is protecting (R-12), read from the real
+/// profile (issue #76 slice 2).
 struct HomeView: View {
-    @State private var model = HomeModel()
+    let model: HomeModel
 
     var body: some View {
         NavigationStack {
