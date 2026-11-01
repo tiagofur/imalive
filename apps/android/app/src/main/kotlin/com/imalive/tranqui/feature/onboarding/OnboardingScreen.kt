@@ -38,14 +38,18 @@ fun OnboardingScreen(
         OnboardingProgress(currentStep = uiState.step.progressSegment())
         when (uiState.step) {
             OnboardingStep.WELCOME -> WelcomeScreen(onStartClicked = viewModel::onStartClicked)
-            OnboardingStep.PHONE, OnboardingStep.CODE ->
-                OtpScreen(
+            OnboardingStep.PHONE ->
+                OtpRequestScreen(
                     uiState = uiState,
                     onPhoneChanged = viewModel::onPhoneChanged,
                     onRequestCodeClicked = viewModel::onRequestCodeClicked,
-                    onResendClicked = viewModel::onResendClicked,
+                )
+            OnboardingStep.CODE ->
+                OtpVerifyScreen(
+                    uiState = uiState,
                     onCodeChanged = viewModel::onCodeChanged,
                     onVerifyClicked = viewModel::onVerifyClicked,
+                    onResendClicked = viewModel::onResendClicked,
                 )
 
             // Slice 4 lands the ritual and the "añade a tu mamá" moment.

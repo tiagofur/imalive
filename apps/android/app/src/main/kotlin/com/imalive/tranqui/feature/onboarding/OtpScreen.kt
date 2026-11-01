@@ -25,31 +25,13 @@ import com.imalive.tranqui.R
 import com.imalive.tranqui.core.designsystem.HeroButton
 import com.imalive.tranqui.feature.onboarding.component.OtpInput
 
-// Paso 2 (brief): "tu teléfono → tu código", una pantalla con dos fases. La
-// única acción protagonista de cada fase vive anclada abajo; carga y errores
-// usan el copy del brief conmutando sobre Problem.code — nunca el detail
-// crudo del contrato.
+// Paso 2 (brief): "tu teléfono → tu código", una pantalla con dos fases —
+// una por composable, montadas por el paso de la máquina. La única acción
+// protagonista de cada fase vive anclada abajo; carga y errores usan el copy
+// del brief conmutando sobre Problem.code — nunca el detail crudo.
 @Composable
 @Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
-fun OtpScreen(
-    uiState: OnboardingUiState,
-    onPhoneChanged: (String) -> Unit,
-    onRequestCodeClicked: () -> Unit,
-    onResendClicked: () -> Unit,
-    onCodeChanged: (String) -> Unit,
-    onVerifyClicked: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (uiState.step == OnboardingStep.PHONE) {
-        PhonePhase(uiState, onPhoneChanged, onRequestCodeClicked, modifier)
-    } else {
-        CodePhase(uiState, onResendClicked, onCodeChanged, onVerifyClicked, modifier)
-    }
-}
-
-@Composable
-@Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
-private fun PhonePhase(
+fun OtpRequestScreen(
     uiState: OnboardingUiState,
     onPhoneChanged: (String) -> Unit,
     onRequestCodeClicked: () -> Unit,
@@ -108,11 +90,11 @@ private fun PhonePhase(
 
 @Composable
 @Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
-private fun CodePhase(
+fun OtpVerifyScreen(
     uiState: OnboardingUiState,
-    onResendClicked: () -> Unit,
     onCodeChanged: (String) -> Unit,
     onVerifyClicked: () -> Unit,
+    onResendClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(

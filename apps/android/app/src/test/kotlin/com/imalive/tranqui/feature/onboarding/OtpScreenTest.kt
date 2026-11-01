@@ -24,14 +24,20 @@ class OtpScreenTest {
     private fun setContent(state: OnboardingUiState) {
         composeRule.setContent {
             TranquiTheme {
-                OtpScreen(
-                    uiState = state,
-                    onPhoneChanged = {},
-                    onRequestCodeClicked = {},
-                    onResendClicked = {},
-                    onCodeChanged = {},
-                    onVerifyClicked = {},
-                )
+                if (state.step == OnboardingStep.PHONE) {
+                    OtpRequestScreen(
+                        uiState = state,
+                        onPhoneChanged = {},
+                        onRequestCodeClicked = {},
+                    )
+                } else {
+                    OtpVerifyScreen(
+                        uiState = state,
+                        onCodeChanged = {},
+                        onVerifyClicked = {},
+                        onResendClicked = {},
+                    )
+                }
             }
         }
     }
