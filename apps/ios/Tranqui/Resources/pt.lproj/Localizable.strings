@@ -18,3 +18,26 @@
 "onboarding.welcome_cta" = "Começar";
 "onboarding.welcome_disclaimer" = "%@ avisa quem você ama; não é um serviço de emergência e não substitui o 911/112.";
 "onboarding.progress_a11y" = "Passo %d de 4";
+
+/* Passo 2: telefone → código (duas fases, uma máquina de passos). */
+"onboarding.phone_title" = "Para qual telefone enviamos o código?";
+"onboarding.phone_sub" = "Só para entrar. Seu número não é mostrado para ninguém.";
+"onboarding.phone_field_label" = "Seu telefone";
+"onboarding.phone_field_hint" = "+52 55 1234 5678";
+"onboarding.phone_cta" = "Enviar o código";
+"onboarding.code_title" = "Digite o código de 6 dígitos";
+"onboarding.code_sub" = "Enviamos para %@.";
+"onboarding.code_field_a11y" = "Digite aqui o código de 6 dígitos";
+"onboarding.code_enter" = "Entrar";
+"onboarding.code_resend" = "Enviar de novo";
+"onboarding.busy_sending_code" = "Enviando seu código…";
+"onboarding.busy_verifying" = "Verificando…";
+
+/* Erros por Problem.code (contrato v0.5.0): copy humano do brief, nunca o
+   detail cru. O 429 mostra a contagem viva desde o header Retry-After. */
+"onboarding.error_phone_invalid" = "Esse telefone não parece completo. Confira.";
+"onboarding.error_otp_invalid" = "Esse código não é. Confira.";
+"onboarding.error_otp_expired" = "O código venceu. Enviamos um novo.";
+"onboarding.error_rate_limited" = "Muitas tentativas. Tente de novo em %d s.";
+"onboarding.error_offline" = "Você está sem internet. Verifique sua conexão e tente de novo.";
+"onboarding.error_retry" = "Algo não deu certo. Tente de novo.";

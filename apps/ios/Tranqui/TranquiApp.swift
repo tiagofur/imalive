@@ -4,11 +4,13 @@ import SwiftUI
 struct TranquiApp: App {
     @State private var sessions: SessionStore
     @State private var home: HomeModel
+    @State private var onboarding: OnboardingModel
 
     init() {
         // One stack for the whole app: the Keychain-backed session store
         // feeds the API's bearer attach and refresh AND the reactive gate
-        // the home model renders from (issue #76 slice 2).
+        // both surfaces render from (issue #76 slices 2-3). The onboarding's
+        // verify saves the session through the same store the home reads.
         let sessions = SessionStore(persisting: Self.sessionPersisting())
         let api = TranquiAPI(sessions: sessions)
         _sessions = State(initialValue: sessions)
@@ -16,12 +18,16 @@ struct TranquiApp: App {
             profiles: NetworkProfileRepository(api: api),
             sessions: sessions
         ))
+        _onboarding = State(initialValue: OnboardingModel(
+            auth: NetworkAuthRepository(api: api, sessions: sessions)
+        ))
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(home)
+                .environment(onboarding)
         }
     }
 
@@ -29,7 +35,7 @@ struct TranquiApp: App {
     /// `-tranqui-session-stub signed-in|signed-out` boots the gate over an
     /// ephemeral store (seeded with a canned session, or empty) without
     /// touching the Keychain — test tokens are not real sessions. The full
-    /// stubbed API mode lands with the onboarding flow (slices 3-4); with
+    /// stubbed API mode lands with the onboarding flow (slice 4); with
     /// only this override the home shows its defaults when the profile read
     /// cannot reach the network, which is exactly the resilience it must have.
     private static func sessionPersisting() -> any SessionPersisting {

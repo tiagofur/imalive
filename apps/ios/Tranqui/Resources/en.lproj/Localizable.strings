@@ -18,3 +18,27 @@
 "onboarding.welcome_cta" = "Get started";
 "onboarding.welcome_disclaimer" = "%@ lets your people know; it is not an emergency service and does not replace 911/112.";
 "onboarding.progress_a11y" = "Step %d of 4";
+
+/* Paso 2: phone → code (two phases, one step machine). */
+"onboarding.phone_title" = "Which phone should we send the code to?";
+"onboarding.phone_sub" = "Just to sign in. Your number is never shown to anyone.";
+"onboarding.phone_field_label" = "Your phone";
+"onboarding.phone_field_hint" = "+52 55 1234 5678";
+"onboarding.phone_cta" = "Send me the code";
+"onboarding.code_title" = "Type the 6-digit code";
+"onboarding.code_sub" = "We sent it to %@.";
+"onboarding.code_field_a11y" = "Type the 6-digit code here";
+"onboarding.code_enter" = "Sign in";
+"onboarding.code_resend" = "Send it again";
+"onboarding.busy_sending_code" = "Sending your code…";
+"onboarding.busy_verifying" = "Verifying…";
+
+/* Errors by Problem.code (contract v0.5.0): the brief's human copy, never
+   the raw detail. The 429 shows the live countdown from the Retry-After
+   header. */
+"onboarding.error_phone_invalid" = "That phone doesn't look complete. Check it.";
+"onboarding.error_otp_invalid" = "That's not the code. Check it.";
+"onboarding.error_otp_expired" = "The code expired. We sent you a new one.";
+"onboarding.error_rate_limited" = "Too many attempts. Try again in %d s.";
+"onboarding.error_offline" = "You're offline. Check your connection and try again.";
+"onboarding.error_retry" = "Something didn't work. Try again.";

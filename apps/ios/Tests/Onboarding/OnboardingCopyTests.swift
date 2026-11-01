@@ -67,4 +67,60 @@ struct OnboardingCopyTests {
 
         #expect(String(format: format, "TRANQUI") == expected)
     }
+
+    // MARK: - paso 2 (teléfono → código)
+
+    @Test(arguments: Lproj.all)
+    func thePhoneQuestionIsTheBriefs(language: String) {
+        let expected = switch language {
+        case "es": "¿A qué teléfono te enviamos el código?"
+        case "en": "Which phone should we send the code to?"
+        default: "Para qual telefone enviamos o código?"
+        }
+        #expect(Lproj(localization: language).string("onboarding.phone_title") == expected)
+    }
+
+    @Test(arguments: Lproj.all)
+    func theCodeSubtitleNamesThePhone(language: String) {
+        let expected = switch language {
+        case "es": "Te lo enviamos al +52 55 1234 5678."
+        case "en": "We sent it to +52 55 1234 5678."
+        default: "Enviamos para +52 55 1234 5678."
+        }
+        let format = Lproj(localization: language).string("onboarding.code_sub")
+
+        #expect(String(format: format, "+52 55 1234 5678") == expected)
+    }
+
+    @Test(arguments: Lproj.all)
+    func otpInvalidSpeaksTheBriefsHumanCopy(language: String) {
+        let expected = switch language {
+        case "es": "Ese código no es. Revísalo."
+        case "en": "That's not the code. Check it."
+        default: "Esse código não é. Confira."
+        }
+        #expect(Lproj(localization: language).string("onboarding.error_otp_invalid") == expected)
+    }
+
+    @Test(arguments: Lproj.all)
+    func otpExpiredSpeaksTheAutoResendCopy(language: String) {
+        let expected = switch language {
+        case "es": "El código caducó. Te enviamos uno nuevo."
+        case "en": "The code expired. We sent you a new one."
+        default: "O código venceu. Enviamos um novo."
+        }
+        #expect(Lproj(localization: language).string("onboarding.error_otp_expired") == expected)
+    }
+
+    @Test(arguments: Lproj.all)
+    func theRateLimitCopyShowsTheLiveSeconds(language: String) {
+        let expected = switch language {
+        case "es": "Demasiados intentos. Prueba otra vez en 47 s."
+        case "en": "Too many attempts. Try again in 47 s."
+        default: "Muitas tentativas. Tente de novo em 47 s."
+        }
+        let format = Lproj(localization: language).string("onboarding.error_rate_limited")
+
+        #expect(String(format: format, 47) == expected)
+    }
 }
