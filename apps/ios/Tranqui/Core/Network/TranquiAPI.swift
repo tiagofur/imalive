@@ -175,10 +175,12 @@ actor TranquiAPI {
     /// The wire encoder. Sorted keys keep the output canonical: key order is
     /// irrelevant to the contract, but a deterministic body makes the exact
     /// bytes assertable in the tests (JSONEncoder's default order is
-    /// hash-based and changes between runs).
+    /// hash-based and changes between runs). WithoutEscapingSlashes keeps
+    /// values verbatim (`America/Mexico_City`, not `America\/Mexico_City`):
+    /// identical JSON for the server, the same bytes Android sends.
     static func encode(_ value: some Encodable) throws -> Data {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(value)
     }
 

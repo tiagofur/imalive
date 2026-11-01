@@ -43,6 +43,26 @@ struct UserProfile: Decodable, Sendable {
     let escalationWindowMinutes: Int
     let streakDays: Int
     let pauseUntil: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, phone, checkinTime, timezone, escalationWindowMinutes, streakDays, pauseUntil
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        phone = try container.decode(String.self, forKey: .phone)
+        checkinTime = try container.decode(String.self, forKey: .checkinTime)
+        timezone = try container.decode(String.self, forKey: .timezone)
+        escalationWindowMinutes = try container.decode(Int.self, forKey: .escalationWindowMinutes)
+        streakDays = try container.decode(Int.self, forKey: .streakDays)
+        // A degraded pauseUntil (a timestamp the wire decoder cannot parse)
+        // reads as no pause instead of sinking the whole profile: the streak
+        // survives, only the freeze is lost (mirror of Android's
+        // parseInstant in its NetworkProfileRepository).
+        pauseUntil = try? container.decodeIfPresent(Date.self, forKey: .pauseUntil)
+    }
 }
 
 /// Partial profile update; omitted (nil) fields keep their values

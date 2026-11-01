@@ -11,35 +11,63 @@ struct HomeModelTests {
         func profile() async throws -> Profile {
             profile
         }
+
+        func update(_: ProfilePatch) async throws {}
     }
 
     private struct ExplodingRepo: ProfileRepository {
         func profile() async throws -> Profile {
             throw URLError(.notConnectedToInternet)
         }
+
+        func update(_: ProfilePatch) async throws {}
+    }
+
+    private func profile(
+        streakDays: Int,
+        checkinTime: String = "21:00",
+        pauseUntil: Date? = nil
+    ) -> Profile {
+        Profile(streakDays: streakDays, checkinTime: checkinTime, pauseUntil: pauseUntil)
     }
 
     @Test func stateStartsPendingAtNineToday() {
-        let model = HomeModel()
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 0)))
 
         #expect(model.state == .pending(nextCheckin: "hoy 21:00"))
         #expect(model.nextCheckinLabel == "hoy 21:00")
     }
 
     @Test func loadsTheStreakFromTheRepository() async {
-        let model = HomeModel(profiles: FixedRepo(profile: Profile(streakDays: 12, streakFrozen: false)))
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 12)))
         await model.loadStreak()
 
         #expect(model.streakDays == 12)
         #expect(model.streakFrozen == false)
     }
 
+    @Test func theNextCheckinLabelFollowsTheProfileSlot() async {
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 3, checkinTime: "08:30")))
+        await model.loadStreak()
+
+        #expect(model.nextCheckinLabel == "hoy 08:30")
+    }
+
     @Test func marksTheStreakFrozenWhileThePauseIsLive() async {
-        let model = HomeModel(profiles: FixedRepo(profile: Profile(streakDays: 7, streakFrozen: true)))
+        let livePause = Date().addingTimeInterval(3600)
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 7, pauseUntil: livePause)))
         await model.loadStreak()
 
         #expect(model.streakDays == 7)
         #expect(model.streakFrozen == true)
+    }
+
+    @Test func anExpiredPauseDoesNotFreezeTheStreak() async {
+        let pastPause = Date().addingTimeInterval(-60)
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 7, pauseUntil: pastPause)))
+        await model.loadStreak()
+
+        #expect(model.streakFrozen == false)
     }
 
     @Test func aFailedProfileReadKeepsTheHomeIntact() async {

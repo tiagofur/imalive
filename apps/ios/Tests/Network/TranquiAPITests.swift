@@ -26,6 +26,35 @@ enum Fixtures {
     }
     """
 
+    /// contracts/openapi.yaml: the UserProfile schema example with the active
+    /// pause (pauseUntil, R-11).
+    static let pausedProfile = """
+    {
+      "id": "01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f",
+      "name": "Ana",
+      "phone": "+5215512345678",
+      "checkinTime": "21:00",
+      "timezone": "America/Mexico_City",
+      "escalationWindowMinutes": 60,
+      "streakDays": 12,
+      "pauseUntil": "2026-11-15T06:00:00Z"
+    }
+    """
+
+    /// The same profile with a garbage timestamp where pauseUntil goes.
+    static let degradedPauseProfile = """
+    {
+      "id": "01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f",
+      "name": "Ana",
+      "phone": "+5215512345678",
+      "checkinTime": "21:00",
+      "timezone": "America/Mexico_City",
+      "escalationWindowMinutes": 60,
+      "streakDays": 12,
+      "pauseUntil": "the day after the pause started"
+    }
+    """
+
     static let rateLimitedProblem = """
     {
       "type": "https://api.tranqui.app/problems/rate-limited",
@@ -178,6 +207,24 @@ struct TranquiAPITests {
         #expect(profile.streakDays == 12)
         #expect(profile.checkinTime == "21:00")
         #expect(StubURLProtocol.lastRequest?.headers["Authorization"] == "Bearer access-token-1")
+    }
+
+    @Test func getProfileDecodesTheActivePauseOfTheSchemaExample() async throws {
+        stub(200, Fixtures.pausedProfile)
+
+        let profile = try await makeAPI().getProfile()
+
+        let formatter = ISO8601DateFormatter()
+        #expect(profile.pauseUntil == formatter.date(from: "2026-11-15T06:00:00Z"))
+    }
+
+    @Test func getProfileReadsADegradedPauseUntilAsNoPause() async throws {
+        stub(200, Fixtures.degradedPauseProfile)
+
+        let profile = try await makeAPI().getProfile()
+
+        #expect(profile.streakDays == 12)
+        #expect(profile.pauseUntil == nil)
     }
 
     @Test func withoutASessionProtectedCallsGoOutAnonymousAnd401MapsToApiError() async throws {
