@@ -12,11 +12,12 @@ import Foundation
 /// business code and the parsed Retry-After). Auth endpoints (`security: []`
 /// in the contract) never carry the bearer header; protected calls attach it
 /// from the session cache and, on a 401, retry once through the single-flight
-/// refresh (TokenRefresher, slice 3 of this chain).
+/// refresh (TokenRefresher).
 actor TranquiAPI {
     private let baseURL: URL
     private let transport: URLSession
     private let sessions: any SessionStoring
+    private let refresher: TokenRefresher
 
     init(
         baseURL: URL = URL(string: "https://api.tranqui.app/v1")!,
@@ -26,6 +27,7 @@ actor TranquiAPI {
         self.baseURL = baseURL
         self.sessions = sessions
         self.transport = transport
+        refresher = TokenRefresher(sessions: sessions)
     }
 
     // MARK: - Week-1 operations (contract v0.5.0)
@@ -93,14 +95,30 @@ actor TranquiAPI {
     // MARK: - Pipeline
 
     /// One request lifecycle: authorize → send → map. A 401 on a protected
-    /// call with `refreshTokenOn401` rotates once through the refresher and
-    /// retries with the fresh pair; a second 401 is terminal (a fresh token
-    /// rejected means the session is dead server-side).
-    private func send(_ request: URLRequest, refreshTokenOn401 _: Bool) async throws -> (Data, HTTPURLResponse) {
+    /// call with `refreshTokenOn401` rotates once through the single-flight
+    /// refresher and retries with the fresh pair; a second 401 is terminal
+    /// (a fresh token rejected means the session is dead server-side). A
+    /// rejected refresh surfaces the original 401; an unreachable refresh
+    /// does too — the session survives for the next attempt either way.
+    private func send(_ request: URLRequest, refreshTokenOn401: Bool) async throws -> (Data, HTTPURLResponse) {
         let prepared = await authorized(request)
         let (data, response) = try await transport.data(for: prepared)
         guard let http = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
+        }
+        if http.statusCode == 401, refreshTokenOn401, let stale = Self.bearerToken(of: prepared) {
+            let outcome = await refresher.refreshedSession(staleAccessToken: stale) { refreshToken in
+                try await self.refreshTokens(refreshToken)
+            }
+            switch outcome {
+            case let .rotated(fresh):
+                var retried = prepared
+                retried.setValue("Bearer \(fresh.accessToken)", forHTTPHeaderField: "Authorization")
+                // One retry, never two: the guard keeps a second 401 terminal.
+                return try await send(retried, refreshTokenOn401: false)
+            case .rejected, .unavailable:
+                break // the original 401 is the answer
+            }
         }
         guard (200 ..< 300).contains(http.statusCode) else {
             throw ProblemEnvelope.parse(
@@ -110,6 +128,17 @@ actor TranquiAPI {
             )
         }
         return (data, http)
+    }
+
+    /// The raw refresh exchange the refresher drives: no bearer (public
+    /// endpoint) and no nested refresh (a 401 here means the session is
+    /// dead — an ApiError, and the refresher wipes the session on it).
+    private func refreshTokens(_ refreshToken: String) async throws -> Tokens {
+        let (data, _) = try await send(
+            request("POST", "auth/refresh", body: RefreshRequest(refreshToken: refreshToken)),
+            refreshTokenOn401: false
+        )
+        return try Self.decode(Tokens.self, from: data)
     }
 
     /// The interceptor-equivalent: attaches `Authorization: Bearer …` to

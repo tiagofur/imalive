@@ -8,28 +8,6 @@ import Testing
 @MainActor
 @Suite("SessionStore")
 struct SessionStoreTests {
-    /// The persistence seam without touching the Keychain.
-    private final class InMemoryPersisting: SessionPersisting, @unchecked Sendable {
-        private let lock = NSLock()
-        private var stored: StoredSession?
-
-        init(initial: StoredSession? = nil) {
-            stored = initial
-        }
-
-        func load() -> StoredSession? {
-            lock.withLock { stored }
-        }
-
-        func save(_ session: StoredSession) {
-            lock.withLock { stored = session }
-        }
-
-        func clear() {
-            lock.withLock { stored = nil }
-        }
-    }
-
     private static func storedSession(accessToken: String = "access-token-1") -> StoredSession {
         StoredSession(
             accessToken: accessToken,
