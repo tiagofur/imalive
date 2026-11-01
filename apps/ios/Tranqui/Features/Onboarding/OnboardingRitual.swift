@@ -123,7 +123,8 @@ extension OnboardingModel {
             state.busy = nil
             state.quotaNotice = true
             sessions.completeOnboarding()
-        case .unauthorized, .validationFailed, .contactNotFound, .otpInvalid, .otpExpired, .rateLimited, .sosPaused, .unknown:
+        case .unauthorized, .validationFailed, .contactNotFound, .otpInvalid,
+             .otpExpired, .rateLimited, .sosPaused, .unknown:
             fallback()
         }
     }
