@@ -15,6 +15,10 @@ data class UserProfile(
     val timezone: String,
     val escalationWindowMinutes: Int,
     val streakDays: Int,
+    // Active pause (R-11): escalation frozen until this instant (RFC 3339
+    // UTC; null/absent = no pause). Optional in the contract, so the default
+    // keeps payloads without it decodable.
+    val pauseUntil: String? = null,
 )
 
 // Partial profile update (PATCH /me); omitted fields keep their values.
