@@ -76,13 +76,7 @@ func (h *Handlers) get(w http.ResponseWriter, r *http.Request) {
 		internal(w, r, err)
 		return
 	}
-	body := profileOf(user)
-	// The streak (R-12) rides on /v1/me: the home screen renders it next to
-	// the check-in button. A read failure must not sink the profile: the
-	// streak is decoration, the identity is not.
-	if streak, err := h.streakFor(r.Context(), uid, user.Timezone); err == nil {
-		body["streakDays"] = streak
-	}
+	body := h.profileBody(r.Context(), uid, user)
 	writeJSON(w, http.StatusOK, body)
 }
 
@@ -165,7 +159,25 @@ func (h *Handlers) patch(w http.ResponseWriter, r *http.Request) {
 		internal(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, profileOf(user))
+	// The contract's UserProfile requires streakDays on EVERY 200 (issue
+	// #86: the PATCH response omitted it and broke v0.5.0 consumers).
+	body := h.profileBody(r.Context(), uuid.MustParse(userID), user)
+	writeJSON(w, http.StatusOK, body)
+}
+
+// profileBody maps the store row to the contract's UserProfile and enriches
+// it with the streak (R-12). A streak read failure must not sink the
+// profile: the streak is decoration, the identity is not — but the field
+// MUST be present (the schema requires it), so a failure contributes the
+// zero value instead of omitting the key.
+func (h *Handlers) profileBody(ctx context.Context, userID uuid.UUID, u authstore.User) map[string]any {
+	body := profileOf(u)
+	streak, err := h.streakFor(ctx, userID, u.Timezone)
+	if err != nil {
+		streak = 0
+	}
+	body["streakDays"] = streak
+	return body
 }
 
 var checkinTimePattern = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
