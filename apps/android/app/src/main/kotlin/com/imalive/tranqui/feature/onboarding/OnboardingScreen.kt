@@ -3,6 +3,9 @@ package com.imalive.tranqui.feature.onboarding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -13,7 +16,8 @@ import com.imalive.tranqui.feature.onboarding.component.OnboardingProgress
 // owns the navigation — the BackHandler walks it backwards so predictive
 // back keeps the drafts. The OTP verify persists the session and the
 // reactive gate (slice 2) swaps this flow for home; no navigation call
-// happens here.
+// happens here. Edge-to-edge (enforced on API 35+): the progress clears
+// the status bar and the CTA clears the gesture area (brief, Android note).
 @Composable
 @Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
 fun OnboardingScreen(
@@ -23,7 +27,14 @@ fun OnboardingScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     BackHandler(enabled = uiState.step != OnboardingStep.WELCOME) { viewModel.onBack() }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding(),
+    ) {
         OnboardingProgress(currentStep = uiState.step.progressSegment())
         when (uiState.step) {
             OnboardingStep.WELCOME -> WelcomeScreen(onStartClicked = viewModel::onStartClicked)
