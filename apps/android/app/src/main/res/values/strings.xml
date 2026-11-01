@@ -6,4 +6,8 @@
     <string name="home_next_checkin">Siguiente check-in: %1$s</string>
     <string name="home_streak_days">%1$d días seguidos 🔥</string>
     <string name="home_streak_frozen">Pausa activa · racha congelada</string>
+    <!-- Onboarding (issue #75). Copy del brief UX (paso 1, bienvenida);
+         el placeholder del gate del slice 2 ya usa el texto definitivo. -->
+    <string name="onboarding_welcome_title">Un toque al día para que los que te quieren sepan que estás bien.</string>
+    <string name="onboarding_welcome_cta">Empezar</string>
 </resources>
