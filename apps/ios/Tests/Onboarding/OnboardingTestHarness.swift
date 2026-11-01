@@ -12,9 +12,24 @@ enum OnboardingHarness {
     static let frozenTick = Duration.seconds(3600)
 
     static func model(auth: FakeAuth = FakeAuth(), tick: Duration = OnboardingHarness.frozenTick) -> OnboardingModel {
-        let model = OnboardingModel(auth: auth)
+        let model = OnboardingModel(
+            auth: auth,
+            profiles: StubProfileRepo(),
+            contacts: StubContactsRepo(),
+            sessions: SessionStore(persisting: InMemoryPersisting())
+        )
         model.cooldownTick = tick
         return model
+    }
+
+    /// A ritual build with explicit seams, for the ritual suites.
+    static func ritualModel(
+        auth: FakeAuth = FakeAuth(),
+        profiles: StubProfileRepo = StubProfileRepo(),
+        contacts: StubContactsRepo = StubContactsRepo(),
+        sessions: SessionStore
+    ) -> OnboardingModel {
+        OnboardingModel(auth: auth, profiles: profiles, contacts: contacts, sessions: sessions)
     }
 
     /// Drives the machine to the code phase the way the UI does.

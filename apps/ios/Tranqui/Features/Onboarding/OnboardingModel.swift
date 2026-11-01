@@ -12,6 +12,11 @@ enum OnboardingStep: Equatable, Hashable, Sendable {
     case welcome
     case phone
     case code
+    /// Paso 3, the ritual (slice 4): the user's name and the reminder time.
+    case ritual
+    /// Paso 4, the memorable moment (slice 4): the trusted contact with the
+    /// message mirror.
+    case contact
 }
 
 /// Which long operation is running: the copy differs per phase (brief paso
@@ -19,6 +24,8 @@ enum OnboardingStep: Equatable, Hashable, Sendable {
 enum OnboardingBusy: Equatable, Sendable {
     case sendingCode
     case verifying
+    case savingRitual
+    case savingContact
 }
 
 enum PhoneError: Equatable, Sendable {
@@ -29,6 +36,20 @@ enum PhoneError: Equatable, Sendable {
     case offline
 
     /// An unexpected business answer: human copy, never the raw detail.
+    case retry
+}
+
+enum RitualError: Equatable, Sendable {
+    /// The name is blank: the welcome message needs someone to call by.
+    case invalidName
+    case offline
+    case retry
+}
+
+enum ContactError: Equatable, Sendable {
+    /// The E.164 check failed (local or the server's PHONE_INVALID).
+    case invalidPhone
+    case offline
     case retry
 }
 
@@ -57,6 +78,24 @@ struct OnboardingUiState: Equatable, Sendable {
     /// and shows the rate-limit copy with the seconds (brief paso 2). Fed
     /// by the Retry-After header.
     var rateLimitSeconds = 0
+
+    /// The ritual (paso 3).
+    var name = ""
+    /// The reminder time as minutes from midnight (default 21:00, the
+    /// product default and the server's column default).
+    var checkinMinutes = 21 * 60
+    var ritualError: RitualError?
+
+    // The contact (paso 4, the memorable moment).
+    var contactName = ""
+    var contactPhone = ""
+    var contactError: ContactError?
+    /// CONTACT_LIMIT_REACHED is not an error: the free plan keeps 1 contact
+    /// and the copy says when to add more (brief paso 4, honesto).
+    var quotaNotice = false
+    /// The saved contact's display name: the arrival copy carries it
+    /// ("Listo. María ya sabe que desde hoy cuentas con ella.").
+    var savedContactName: String?
 }
 
 /// The onboarding step machine (plan issue #76, the iOS mirror of Android's
@@ -69,6 +108,9 @@ final class OnboardingModel {
     private(set) var state = OnboardingUiState()
 
     private let auth: any AuthRepository
+    private let profiles: any ProfileRepository
+    private let contacts: any ContactsRepository
+    private let sessions: SessionStore
     private var cooldownTask: Task<Void, Never>?
 
     /// The cooldown tick: 1 s in production. The tests inject a long tick to
@@ -76,8 +118,21 @@ final class OnboardingModel {
     /// drain — the same trick as Android's virtual test dispatcher.
     var cooldownTick: Duration = .seconds(1)
 
-    init(auth: any AuthRepository) {
+    init(
+        auth: any AuthRepository,
+        profiles: any ProfileRepository,
+        contacts: any ContactsRepository,
+        sessions: SessionStore
+    ) {
         self.auth = auth
+        self.profiles = profiles
+        self.contacts = contacts
+        self.sessions = sessions
+        // A process death mid-onboarding (the OTP verify already saved the
+        // session) resumes at the ritual: the auth phases are done.
+        if sessions.session != nil {
+            state.step = .ritual
+        }
     }
 
     // MARK: - Intents
@@ -139,16 +194,146 @@ final class OnboardingModel {
             state.step = .phone
         case .code:
             break
+        case .ritual:
+            state.step = .ritual
+        case .contact:
+            state.step = .contact
         }
     }
 
     /// The path the NavigationStack renders for the current step (welcome is
-    /// the root; phone and code stack on top of it).
+    /// the root; phone and code stack on top of it). The ritual and contact
+    /// steps are flat (the system back is disabled there on purpose: leaving
+    /// mid-ritual with a saved session would strand a half-open account).
     func navigationPath() -> [OnboardingStep] {
         switch state.step {
         case .welcome: []
         case .phone: [.phone]
         case .code: [.phone, .code]
+        case .ritual, .contact: []
+        }
+    }
+
+    // MARK: - The ritual (paso 3)
+
+    func ritualNameChanged(_ raw: String) {
+        // The server accepts 1..80 characters; the field stops there
+        // instead of failing later.
+        state.name = String(raw.prefix(Self.maxNameLength))
+        state.ritualError = nil
+    }
+
+    func ritualTimeChanged(minutesFromMidnight: Int) {
+        state.checkinMinutes = max(0, min(24 * 60 - 1, minutesFromMidnight))
+    }
+
+    func ritualContinueTapped() {
+        guard state.busy == nil else { return }
+        guard let name = state.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .nonEmpty
+        else {
+            state.ritualError = .invalidName
+            return
+        }
+        let patch = ProfilePatch(
+            name: name,
+            checkinTime: Self.hhmm(state.checkinMinutes),
+            timezone: TimeZone.current.identifier
+        )
+        state.busy = .savingRitual
+        state.ritualError = nil
+        Task {
+            do {
+                try await profiles.update(patch)
+                state.busy = nil
+                state.step = .contact
+            } catch is URLError {
+                state.busy = nil
+                state.ritualError = .offline
+            } catch {
+                state.busy = nil
+                state.ritualError = .retry
+            }
+        }
+    }
+
+    // MARK: - The contact (paso 4, the memorable moment)
+
+    func contactNameChanged(_ raw: String) {
+        state.contactName = String(raw.prefix(Self.maxNameLength))
+        state.contactError = nil
+        state.quotaNotice = false
+    }
+
+    func contactPhoneChanged(_ raw: String) {
+        state.contactPhone = raw.filter { Self.digits.contains($0) || $0 == "+" }
+        state.contactError = nil
+        state.quotaNotice = false
+    }
+
+    func inviteTapped() {
+        guard state.busy == nil else { return }
+        guard (try? Self.e164.wholeMatch(in: state.contactPhone)) != nil else {
+            state.contactError = .invalidPhone
+            return
+        }
+        let name = state.contactName
+        let phone = state.contactPhone
+        state.busy = .savingContact
+        state.contactError = nil
+        Task {
+            do {
+                let saved = try await contacts.create(name: name, phone: phone)
+                // The backend sent the real welcome; the mirror already
+                // showed it. The flow is finished: home opens.
+                await sessions.completeOnboarding()
+                state.busy = nil
+                state.savedContactName = saved.name
+            } catch let error as ApiError {
+                handleContact(error, fallback: {
+                    state.busy = nil
+                    state.contactError = .retry
+                })
+            } catch is URLError {
+                state.busy = nil
+                state.contactError = .offline
+            } catch {
+                state.busy = nil
+                state.contactError = .retry
+            }
+        }
+    }
+
+    /// The honest skip (brief paso 4): the account works, the circle waits.
+    func skipContactTapped() {
+        guard state.busy == nil else { return }
+        sessions.completeOnboarding()
+    }
+
+    /// "Invitar a otra persona" — same screen, clean fields. The free plan's
+    /// next create answers CONTACT_LIMIT_REACHED, which is the quota copy,
+    /// never an error state (brief paso 4).
+    func inviteAnotherTapped() {
+        state.savedContactName = nil
+        state.contactName = ""
+        state.contactPhone = ""
+        state.contactError = nil
+        state.quotaNotice = false
+    }
+
+    private func handleContact(_ error: ApiError, fallback: () -> Void) {
+        switch error.code {
+        case .phoneInvalid:
+            state.busy = nil
+            state.contactError = .invalidPhone
+        case .contactLimitReached:
+            // Not an error: the invitation may not have gone out, but the
+            // onboarding is complete either way.
+            state.busy = nil
+            state.quotaNotice = true
+            sessions.completeOnboarding()
+        case .unauthorized, .validationFailed, .contactNotFound, .otpInvalid, .otpExpired, .rateLimited, .sosPaused, .unknown:
+            fallback()
         }
     }
 
@@ -191,11 +376,12 @@ final class OnboardingModel {
         Task {
             do {
                 try await auth.verifyOtp(phone: phone, code: code)
-                // The repo persisted the session: the reactive gate lands
-                // home with no navigation call. The machine resets, so a
-                // session wiped later (a rejected refresh) reopens the flow
-                // fresh instead of mid-code.
+                // The repo persisted the session: the flow continues at the
+                // ritual (slice 4 — a session alone is not home). The reset
+                // keeps a session wiped later (a rejected refresh) reopening
+                // the flow fresh instead of mid-code.
                 state = OnboardingUiState()
+                state.step = .ritual
             } catch let error as ApiError {
                 handle(error, fallback: {
                     state.busy = nil
@@ -260,17 +446,34 @@ final class OnboardingModel {
     private static let codeLength = 6
     private static let defaultCooldownSeconds = 60
     private static let digits = "0123456789"
+    private static let maxNameLength = 80
 
     /// E.164: + followed by 8–15 digits, country code not starting 0.
     private static let e164 = /^\+[1-9]\d{7,14}$/
+
+    /// Minutes-from-midnight → the contract's HH:MM (24h).
+    private static func hhmm(_ minutes: Int) -> String {
+        String(format: "%02d:%02d", minutes / 60, minutes % 60)
+    }
 }
 
 #if DEBUG
     extension OnboardingModel {
-        /// Previews only: a model frozen at a given state (the preview auth seam
-        /// answers nothing).
+        /// Previews and tests only: jumps the machine to a step without the
+        /// wire (the ritual suites exercise contact flows directly).
+        func jumpTo(_ step: OnboardingStep) {
+            state.step = step
+        }
+
+        /// Previews only: a model frozen at a given state (the preview seams
+        /// answer nothing).
         convenience init(previewState: OnboardingUiState) {
-            self.init(auth: PreviewAuthRepository())
+            self.init(
+                auth: PreviewAuthRepository(),
+                profiles: PreviewSupport.profiles,
+                contacts: PreviewSupport.contacts,
+                sessions: PreviewSupport.sessions
+            )
             state = previewState
         }
     }

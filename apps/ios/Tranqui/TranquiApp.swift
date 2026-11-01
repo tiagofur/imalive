@@ -19,7 +19,10 @@ struct TranquiApp: App {
             sessions: sessions
         ))
         _onboarding = State(initialValue: OnboardingModel(
-            auth: NetworkAuthRepository(api: api, sessions: sessions)
+            auth: NetworkAuthRepository(api: api, sessions: sessions),
+            profiles: NetworkProfileRepository(api: api),
+            contacts: NetworkContactsRepository(api: api),
+            sessions: sessions
         ))
     }
 

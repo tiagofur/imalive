@@ -19,6 +19,11 @@ struct HomeView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                } else {
+                    // The arrival from onboarding (issue #76 slice 4): a
+                    // streak at zero is a beginning, never a debt (brief).
+                    Text(String(localized: "home.streak_zero"))
+                        .font(.title2.bold())
                 }
                 Text(nextCheckinText)
                     .font(.body)

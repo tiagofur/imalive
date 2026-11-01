@@ -42,3 +42,36 @@
 "onboarding.error_rate_limited" = "Too many attempts. Try again in %d s.";
 "onboarding.error_offline" = "You're offline. Check your connection and try again.";
 "onboarding.error_retry" = "Something didn't work. Try again.";
+
+/* Step 3, the ritual (brief): the name your people will call you by and the
+   reminder time. */
+"onboarding.ritual_title" = "What should we call you?";
+"onboarding.ritual_name_label" = "Your name";
+"onboarding.ritual_name_error" = "Tell us your name: that's what your people will call you.";
+"onboarding.ritual_time_title" = "What time should we remind you each day?";
+"onboarding.ritual_time_sub" = "We suggest 9:00 PM: a quiet hour to say the day closed well. Pick yours.";
+"onboarding.ritual_time_label" = "Your check-in time";
+"onboarding.ritual_time_a11y" = "Pick the reminder time. Currently %@.";
+"onboarding.ritual_cta" = "Continue";
+"onboarding.busy_saving_ritual" = "Saving your ritual…";
+
+/* Step 4, the memorable moment (brief): the bubble mirroring the REAL
+   message your trusted person will receive (welcomeMessageV1, backend). */
+"onboarding.contact_title" = "Who checks on you when you made it home?";
+"onboarding.contact_sub" = "Invite that trusted person. They get this message today:";
+"onboarding.contact_welcome_message" = "%1$@: %2$@ added you as their trusted person in %3$@, the app they check in with every day to say they're fine. You don't have to do anything. We'll only write to you if %2$@ goes many hours without checking in, so you can see how they're doing. %3$@ is a person-to-person notice service; it is not an emergency service.";
+"onboarding.contact_preview_you" = "[your name]";
+"onboarding.contact_preview_them" = "[their name]";
+"onboarding.contact_name_label" = "Their name";
+"onboarding.contact_phone_label" = "Their phone";
+"onboarding.contact_phone_hint" = "+52 55 1234 5678";
+"onboarding.contact_cta" = "Send the WhatsApp invitation";
+"onboarding.contact_skip" = "I'll do it later";
+"onboarding.contact_limit" = "For now your plan keeps 1 contact. Add more any time from Your circle.";
+"onboarding.contact_saved" = "Done. %@ knows that from today you count on her.";
+"onboarding.contact_finish" = "Go to home";
+"onboarding.contact_share_fallback" = "Share the invitation myself";
+"onboarding.busy_saving_contact" = "Sending your invitation…";
+
+/* The arrival (brief): a streak at zero is a beginning, never a debt. */
+"home.streak_zero" = "Your streak starts today.";

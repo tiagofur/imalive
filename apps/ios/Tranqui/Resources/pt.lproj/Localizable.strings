@@ -41,3 +41,36 @@
 "onboarding.error_rate_limited" = "Muitas tentativas. Tente de novo em %d s.";
 "onboarding.error_offline" = "Você está sem internet. Verifique sua conexão e tente de novo.";
 "onboarding.error_retry" = "Algo não deu certo. Tente de novo.";
+
+/* Passo 3, o ritual (brief): o nome pelo qual a sua gente vai te chamar e a
+   hora do lembrete. */
+"onboarding.ritual_title" = "Como te chamamos?";
+"onboarding.ritual_name_label" = "Seu nome";
+"onboarding.ritual_name_error" = "Escreve seu nome: é assim que a sua gente vai te chamar.";
+"onboarding.ritual_time_title" = "A que horas te lembramos todos os dias?";
+"onboarding.ritual_time_sub" = "Sugerimos 21:00: uma hora tranquila para avisar que o dia fechou bem. Escolha a sua.";
+"onboarding.ritual_time_label" = "Seu horário de check-in";
+"onboarding.ritual_time_a11y" = "Escolher a hora do lembrete. Atualmente %@.";
+"onboarding.ritual_cta" = "Continuar";
+"onboarding.busy_saving_ritual" = "Salvando seu ritual…";
+
+/* Passo 4, o momento memorável (brief): a bolha espelhando a mensagem REAL
+   que a sua pessoa de confiança vai receber (welcomeMessageV1, backend). */
+"onboarding.contact_title" = "Quem pergunta se você chegou bem?";
+"onboarding.contact_sub" = "Convide essa pessoa de confiança. Ela recebe hoje uma mensagem assim:";
+"onboarding.contact_welcome_message" = "%1$@: %2$@ te adicionou como pessoa de confiança no %3$@, o app com o que ele confirma todo dia que está bem. Você não precisa fazer nada. Só escreveremos se %2$@ passar muitas horas sem confirmar, para que você possa ver como está. O %3$@ é um serviço de avisos entre pessoas; não é um serviço de emergências.";
+"onboarding.contact_preview_you" = "[seu nome]";
+"onboarding.contact_preview_them" = "[nome dela]";
+"onboarding.contact_name_label" = "Nome dela";
+"onboarding.contact_phone_label" = "Telefone dela";
+"onboarding.contact_phone_hint" = "+52 55 1234 5678";
+"onboarding.contact_cta" = "Enviar convite por WhatsApp";
+"onboarding.contact_skip" = "Faço isso depois";
+"onboarding.contact_limit" = "Por ora seu plano guarda 1 contato. Adicione mais quando quiser em Seu círculo.";
+"onboarding.contact_saved" = "Pronto. %@ sabe que de hoje em diante você conta com ela.";
+"onboarding.contact_finish" = "Ir para o início";
+"onboarding.contact_share_fallback" = "Compartilhar o convite eu mesmo";
+"onboarding.busy_saving_contact" = "Enviando seu convite…";
+
+/* A chegada (brief): uma ofensiva em zero é um começo, nunca uma dívida. */
+"home.streak_zero" = "Sua ofensiva começa hoje.";
