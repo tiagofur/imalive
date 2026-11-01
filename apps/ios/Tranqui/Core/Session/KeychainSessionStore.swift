@@ -18,6 +18,13 @@ protocol SessionPersisting: Sendable {
     func load() -> StoredSession?
     func save(_ session: StoredSession)
     func clear()
+
+    /// The onboarding-finished flag (issue #76 slice 4): the session alone
+    /// is not enough to land home — the ritual and the trusted contact (or
+    /// the honest skip) must close the flow first. `clear()` resets it.
+    func setOnboardingComplete(_ complete: Bool)
+
+    func isOnboardingComplete() -> Bool
 }
 
 /// Keychain persistence for `StoredSession`: one `kSecClassGenericPassword`
@@ -34,6 +41,11 @@ final class KeychainSessionStore: SessionPersisting, @unchecked Sendable {
     private let service: String
     private let account = "session"
 
+    /// The onboarding flag is not a secret (docs/stack/ios.md: UserDefaults
+    /// for non-sensitive preferences) — only the tokens live in the Keychain.
+    private let defaults: UserDefaults
+    private static let onboardingCompleteKey = "onboarding_complete"
+
     /// In-memory mirror: the hot path (bearer attach on every request)
     /// reads this, never the Keychain.
     private let lock = NSLock()
@@ -41,8 +53,9 @@ final class KeychainSessionStore: SessionPersisting, @unchecked Sendable {
 
     /// Loads the persisted session once; a corrupt record reads as no
     /// session (the user just signs in again — never a crash on launch).
-    init(service: String = "com.imalive.tranqui.session") {
+    init(service: String = "com.imalive.tranqui.session", defaults: UserDefaults = .standard) {
         self.service = service
+        self.defaults = defaults
         cache = Self.read(service: service, account: account)
     }
 
@@ -66,7 +79,16 @@ final class KeychainSessionStore: SessionPersisting, @unchecked Sendable {
 
     func clear() {
         SecItemDelete(baseQuery as CFDictionary)
+        defaults.removeObject(forKey: Self.onboardingCompleteKey) // the flag closes with the session
         lock.withLock { cache = nil }
+    }
+
+    func setOnboardingComplete(_ complete: Bool) {
+        defaults.set(complete, forKey: Self.onboardingCompleteKey)
+    }
+
+    func isOnboardingComplete() -> Bool {
+        defaults.bool(forKey: Self.onboardingCompleteKey)
     }
 
     private var baseQuery: [String: Any] {

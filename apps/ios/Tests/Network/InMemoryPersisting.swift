@@ -7,6 +7,7 @@ import Foundation
 final class InMemoryPersisting: SessionPersisting, @unchecked Sendable {
     private let lock = NSLock()
     private var stored: StoredSession?
+    private var onboardingComplete = false
 
     init(initial: StoredSession? = nil) {
         stored = initial
@@ -21,6 +22,17 @@ final class InMemoryPersisting: SessionPersisting, @unchecked Sendable {
     }
 
     func clear() {
-        lock.withLock { stored = nil }
+        lock.withLock {
+            stored = nil
+            onboardingComplete = false
+        }
+    }
+
+    func setOnboardingComplete(_ complete: Bool) {
+        lock.withLock { onboardingComplete = complete }
+    }
+
+    func isOnboardingComplete() -> Bool {
+        lock.withLock { onboardingComplete }
     }
 }

@@ -18,6 +18,14 @@ struct TokenRefresherTests {
 
     init() {
         store = SessionStore(persisting: persisting)
+        // The refresher tests exercise a user already on home (the 401s of
+        // real API calls): the gate fixture completes the onboarding.
+        store.save(StoredSession(
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: Date(timeIntervalSince1970: 0)
+        ))
+        store.completeOnboarding()
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
         api = TranquiAPI(
@@ -107,7 +115,7 @@ struct TokenRefresherTests {
         // The session now holds the rotated pair, cache and persistence.
         #expect(store.session?.accessToken == "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example")
         #expect(persisting.load()?.accessToken == "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example")
-        #expect(store.gate == .ready)
+        #expect(store.gate == .ready) // the fixture store completed onboarding
     }
 
     @Test func aRejectedRefreshWipesTheSessionAndTheOriginalCallFails() async throws {
@@ -164,7 +172,7 @@ struct TokenRefresherTests {
         }
 
         #expect(store.session?.accessToken == "stale-access-token")
-        #expect(store.gate == .ready)
+        #expect(store.gate == .ready) // the fixture store completed onboarding
         #expect(persisting.load()?.accessToken == "stale-access-token")
     }
 
