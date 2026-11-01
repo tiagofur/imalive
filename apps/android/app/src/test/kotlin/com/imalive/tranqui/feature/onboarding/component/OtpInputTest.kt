@@ -73,7 +73,7 @@ class OtpInputTest {
     }
 
     @Test
-    fun thereAreExactlySixCells() {
+    fun theSixCellsAreOneEditableField() {
         val reported = mutableStateOf("")
         composeRule.setContent {
             TranquiTheme {

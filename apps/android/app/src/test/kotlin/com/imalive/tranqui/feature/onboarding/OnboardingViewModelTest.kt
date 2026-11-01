@@ -320,6 +320,21 @@ class OnboardingViewModelTest {
         }
 
     @Test
+    fun `an unexpected business answer in the phone phase writes the phone slot, not the code slot`() =
+        runTest {
+            val auth = FakeAuth()
+            auth.requestError = ApiError(ApiErrorCode.UNAUTHORIZED, httpStatus = 401)
+            val viewModel = OnboardingViewModel(auth)
+            viewModel.onStartClicked()
+            viewModel.onPhoneChanged("+5215512345678")
+
+            viewModel.onRequestCodeClicked()
+
+            assertEquals(PhoneError.RETRY, viewModel.uiState.value.phoneError)
+            assertNull(viewModel.uiState.value.codeError)
+        }
+
+    @Test
     fun `an offline verify keeps the code and asks to retry`() =
         runTest {
             val auth = FakeAuth()

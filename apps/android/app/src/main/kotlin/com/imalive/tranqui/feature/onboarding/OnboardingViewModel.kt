@@ -153,7 +153,9 @@ class OnboardingViewModel
                     auth.requestOtp(phone)
                     _uiState.update { it.copy(busy = null, step = OnboardingStep.CODE) }
                 } catch (error: ApiError) {
-                    onApiError(error)
+                    onApiError(error) {
+                        _uiState.update { it.copy(busy = null, phoneError = PhoneError.RETRY) }
+                    }
                 } catch (_: IOException) {
                     _uiState.update { it.copy(busy = null, phoneError = PhoneError.OFFLINE) }
                 }
@@ -171,7 +173,9 @@ class OnboardingViewModel
                     auth.requestOtp(phone)
                     _uiState.update { it.copy(busy = null, codeError = CodeError.EXPIRED) }
                 } catch (error: ApiError) {
-                    onApiError(error)
+                    onApiError(error) {
+                        _uiState.update { it.copy(busy = null, codeError = CodeError.RETRY) }
+                    }
                 } catch (_: IOException) {
                     _uiState.update { it.copy(busy = null, codeError = CodeError.OFFLINE) }
                 }
@@ -189,7 +193,9 @@ class OnboardingViewModel
                     // onboarding for home — nothing to navigate from here.
                     _uiState.update { it.copy(busy = null) }
                 } catch (error: ApiError) {
-                    onApiError(error)
+                    onApiError(error) {
+                        _uiState.update { it.copy(busy = null, codeError = CodeError.RETRY) }
+                    }
                 } catch (_: IOException) {
                     _uiState.update { it.copy(busy = null, codeError = CodeError.OFFLINE) }
                 }
@@ -197,8 +203,13 @@ class OnboardingViewModel
         }
 
         // The brief: the app switches on the stable Problem.code and never
-        // shows the raw detail (ux-brief §6).
-        private fun onApiError(error: ApiError) {
+        // shows the raw detail (ux-brief §6). The fallback belongs to the
+        // phase that was in flight — a non-mapped code during the request
+        // must not write into the code slot where the user can't see it.
+        private fun onApiError(
+            error: ApiError,
+            fallback: () -> Unit,
+        ) {
             when (error.code) {
                 ApiErrorCode.PHONE_INVALID ->
                     _uiState.update { it.copy(busy = null, phoneError = PhoneError.INVALID) }
@@ -218,7 +229,7 @@ class OnboardingViewModel
                     startCooldown(error.retryAfterSeconds ?: DEFAULT_COOLDOWN_SECONDS)
                 }
 
-                else -> _uiState.update { it.copy(busy = null, codeError = CodeError.RETRY) }
+                else -> fallback()
             }
         }
 
