@@ -11,3 +11,8 @@
 
 /* Frozen while the pause mode is live (R-11: the value does not change). */
 "home.streak_frozen" = "Pausa activa · racha congelada";
+
+/* Onboarding (issue #76). Copy del brief UX (paso 1, bienvenida);
+   el placeholder del gate del slice 2 ya usa el texto definitivo. */
+"onboarding.welcome_title" = "Un toque al día para que los que te quieren sepan que estás bien.";
+"onboarding.welcome_cta" = "Empezar";

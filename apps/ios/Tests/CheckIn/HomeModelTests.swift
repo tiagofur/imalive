@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 struct HomeModelTests {
-    /// A repo the tests control: fixed values or an explosion.
+    /// Repos the tests control: fixed values, an explosion or a counter.
     private struct FixedRepo: ProfileRepository {
         let profile: Profile
 
@@ -23,6 +23,29 @@ struct HomeModelTests {
         func update(_: ProfilePatch) async throws {}
     }
 
+    /// Counts the profile reads: proves what the gate does and does not read.
+    /// @unchecked: the lock guards the only mutable state.
+    private final class CountingRepo: ProfileRepository, @unchecked Sendable {
+        let profile: Profile
+        private let lock = NSLock()
+        private var count = 0
+
+        init(profile: Profile) {
+            self.profile = profile
+        }
+
+        var calls: Int {
+            lock.withLock { count }
+        }
+
+        func profile() async throws -> Profile {
+            lock.withLock { count += 1 }
+            return profile
+        }
+
+        func update(_: ProfilePatch) async throws {}
+    }
+
     private func profile(
         streakDays: Int,
         checkinTime: String = "21:00",
@@ -31,15 +54,126 @@ struct HomeModelTests {
         Profile(streakDays: streakDays, checkinTime: checkinTime, pauseUntil: pauseUntil)
     }
 
+    private func session() -> StoredSession {
+        StoredSession(
+            accessToken: "access-token-1",
+            refreshToken: "refresh-token-1",
+            expiresAt: Date(timeIntervalSince1970: 0)
+        )
+    }
+
+    private func signedInStore() -> SessionStore {
+        SessionStore(persisting: InMemoryPersisting(initial: session()))
+    }
+
     @Test func stateStartsPendingAtNineToday() {
-        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 0)))
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 0)), sessions: signedInStore())
 
         #expect(model.state == .pending(nextCheckin: "hoy 21:00"))
         #expect(model.nextCheckinLabel == "hoy 21:00")
     }
 
+    // MARK: - session gate (issue #76 slice 2)
+
+    @Test func withoutASessionTheGateAsksForOnboardingAndNeverReadsTheProfile() {
+        let store = SessionStore(persisting: InMemoryPersisting())
+        let repo = CountingRepo(profile: profile(streakDays: 12))
+        let model = HomeModel(profiles: repo, sessions: store)
+
+        #expect(model.gate == .needsOnboarding)
+        #expect(model.streakDays == 0)
+        #expect(repo.calls == 0)
+    }
+
+    @Test func withASessionTheHomeIsReadyAndLoadsTheRealStreak() async {
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 12)), sessions: signedInStore())
+        await model.loadStreak()
+
+        #expect(model.gate == .ready)
+        #expect(model.streakDays == 12)
+        #expect(model.nextCheckinLabel == "hoy 21:00")
+    }
+
+    @Test func aSessionSavedWhileTheAppIsUpLandsTheUserOnHome() async {
+        // The OTP verify of the onboarding (slice 3) saves the session with
+        // the app already running: the reaction must land home, not just at
+        // the next launch.
+        let store = SessionStore(persisting: InMemoryPersisting())
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 5)), sessions: store)
+        #expect(model.gate == .needsOnboarding)
+
+        store.save(session())
+        model.reactToSession()
+
+        #expect(model.gate == .ready)
+        await model.loadStreak()
+        #expect(model.streakDays == 5)
+    }
+
+    @Test func theObservationWiringFiresTheReactionOnAStoredChange() async throws {
+        let store = SessionStore(persisting: InMemoryPersisting())
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 5)), sessions: store)
+        #expect(model.gate == .needsOnboarding)
+
+        store.save(session())
+        // The reaction re-arms itself on every fire; a short sleep lets the
+        // @MainActor task run (there is no deterministic drain API).
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(model.gate == .ready)
+
+        store.clear()
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(model.gate == .needsOnboarding)
+    }
+
+    @Test func aSessionWipedByTheRefresherWalksTheUserBackToOnboarding() async {
+        let store = signedInStore()
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 12)), sessions: store)
+        await model.loadStreak()
+        #expect(model.gate == .ready)
+        #expect(model.streakDays == 12)
+
+        store.clear()
+        model.reactToSession()
+
+        #expect(model.gate == .needsOnboarding)
+        // The previous user's data does not leak into the entry point.
+        #expect(model.streakDays == 0)
+        #expect(model.streakFrozen == false)
+        #expect(model.nextCheckinLabel == "hoy 21:00")
+    }
+
+    @Test func aTokenRotationDoesNotReloadTheStreak() async throws {
+        let store = signedInStore()
+        let repo = CountingRepo(profile: profile(streakDays: 12))
+        let model = HomeModel(profiles: repo, sessions: store)
+        await model.loadStreak()
+        #expect(model.gate == .ready)
+        // Drain the transition's own load (the init fires it as a Task)
+        // before taking the snapshot.
+        try await Task.sleep(for: .milliseconds(50))
+        let readsBefore = repo.calls
+
+        // The refresher rotates the pair (slice 1) while home is up: the
+        // gate stays ready and no new profile read happens.
+        store.save(StoredSession(
+            accessToken: "access-token-2",
+            refreshToken: "refresh-token-2",
+            expiresAt: Date(timeIntervalSince1970: 0)
+        ))
+        model.reactToSession()
+        try await Task.sleep(for: .milliseconds(50))
+
+        #expect(model.gate == .ready)
+        #expect(repo.calls == readsBefore)
+        // The loaded values are untouched by the rotation.
+        #expect(model.streakDays == 12)
+    }
+
+    // MARK: - streak (R-12, real shape of #76 slice 2)
+
     @Test func loadsTheStreakFromTheRepository() async {
-        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 12)))
+        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 12)), sessions: signedInStore())
         await model.loadStreak()
 
         #expect(model.streakDays == 12)
@@ -47,7 +181,10 @@ struct HomeModelTests {
     }
 
     @Test func theNextCheckinLabelFollowsTheProfileSlot() async {
-        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 3, checkinTime: "08:30")))
+        let model = HomeModel(
+            profiles: FixedRepo(profile: profile(streakDays: 3, checkinTime: "08:30")),
+            sessions: signedInStore()
+        )
         await model.loadStreak()
 
         #expect(model.nextCheckinLabel == "hoy 08:30")
@@ -55,7 +192,10 @@ struct HomeModelTests {
 
     @Test func marksTheStreakFrozenWhileThePauseIsLive() async {
         let livePause = Date().addingTimeInterval(3600)
-        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 7, pauseUntil: livePause)))
+        let model = HomeModel(
+            profiles: FixedRepo(profile: profile(streakDays: 7, pauseUntil: livePause)),
+            sessions: signedInStore()
+        )
         await model.loadStreak()
 
         #expect(model.streakDays == 7)
@@ -64,16 +204,20 @@ struct HomeModelTests {
 
     @Test func anExpiredPauseDoesNotFreezeTheStreak() async {
         let pastPause = Date().addingTimeInterval(-60)
-        let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 7, pauseUntil: pastPause)))
+        let model = HomeModel(
+            profiles: FixedRepo(profile: profile(streakDays: 7, pauseUntil: pastPause)),
+            sessions: signedInStore()
+        )
         await model.loadStreak()
 
         #expect(model.streakFrozen == false)
     }
 
     @Test func aFailedProfileReadKeepsTheHomeIntact() async {
-        let model = HomeModel(profiles: ExplodingRepo())
+        let model = HomeModel(profiles: ExplodingRepo(), sessions: signedInStore())
         await model.loadStreak()
 
+        #expect(model.gate == .ready)
         #expect(model.streakDays == 0)
         #expect(model.streakFrozen == false)
         #expect(model.nextCheckinLabel == "hoy 21:00")
