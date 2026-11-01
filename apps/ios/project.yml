@@ -22,6 +22,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1" # phone-first product (docs/diseno/ux-movil.md)
         GENERATE_INFOPLIST_FILE: YES # F0: no permissions, nothing custom in the plist
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Tranqui # the placeholder product name (#5): copy interpolates it — resolving #5 changes this one value
         SWIFT_EMIT_LOC_STRINGS: YES
   TranquiTests:
     type: bundle.unit-test

@@ -10,7 +10,11 @@
 /* Frozen while the pause mode is live (R-11: the value does not change). */
 "home.streak_frozen" = "Pausa ativa · ofensiva congelada";
 
-/* Onboarding (issue #76). The brief UX's paso-1 copy; the gate placeholder
-   of slice 2 already uses the definitive text. */
+/* Onboarding (issue #76). The brief UX's paso-1 copy. The product name is a
+   placeholder (#5): name-bearing copy interpolates the bundle display name —
+   resolving #5 changes one value in project.yml. */
 "onboarding.welcome_title" = "Um toque por dia para que quem te ama saiba que você está bem.";
+"onboarding.welcome_sub" = "Se um dia você não confirmar, quem te ama fica sabendo na hora e alguém pode verificar como você está.";
 "onboarding.welcome_cta" = "Começar";
+"onboarding.welcome_disclaimer" = "%@ avisa quem você ama; não é um serviço de emergência e não substitui o 911/112.";
+"onboarding.progress_a11y" = "Passo %d de 4";

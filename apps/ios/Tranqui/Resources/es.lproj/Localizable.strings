@@ -12,7 +12,11 @@
 /* Frozen while the pause mode is live (R-11: the value does not change). */
 "home.streak_frozen" = "Pausa activa · racha congelada";
 
-/* Onboarding (issue #76). Copy del brief UX (paso 1, bienvenida);
-   el placeholder del gate del slice 2 ya usa el texto definitivo. */
+/* Onboarding (issue #76). Copy del brief UX (R-14). "Tranqui" es placeholder
+   del nombre de producto (#5): todo copy que dependa del nombre interpola el
+   display name del bundle — resolver #5 cambia un solo valor en project.yml. */
 "onboarding.welcome_title" = "Un toque al día para que los que te quieren sepan que estás bien.";
+"onboarding.welcome_sub" = "Si un día no confirmas, tu gente lo sabe al instante y alguien puede comprobar cómo estás.";
 "onboarding.welcome_cta" = "Empezar";
+"onboarding.welcome_disclaimer" = "%@ avisa a tu gente; no es un servicio de emergencia y no sustituye al 911/112.";
+"onboarding.progress_a11y" = "Paso %d de 4";

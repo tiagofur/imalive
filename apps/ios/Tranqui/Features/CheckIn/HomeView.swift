@@ -27,7 +27,7 @@ struct HomeView: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
-            .navigationTitle("Tranqui")
+            .navigationTitle(Bundle.main.productDisplayName)
         }
     }
 

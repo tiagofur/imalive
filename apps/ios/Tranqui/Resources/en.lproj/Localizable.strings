@@ -10,7 +10,11 @@
 /* Frozen while the pause mode is live (R-11: the value does not change). */
 "home.streak_frozen" = "Pause on · streak frozen";
 
-/* Onboarding (issue #76). The brief UX's paso-1 copy; the gate placeholder
-   of slice 2 already uses the definitive text. */
+/* Onboarding (issue #76). The brief UX's paso-1 copy. The product name is a
+   placeholder (#5): name-bearing copy interpolates the bundle display name —
+   resolving #5 changes one value in project.yml. */
 "onboarding.welcome_title" = "One tap a day so the people who love you know you're okay.";
+"onboarding.welcome_sub" = "If one day you don't confirm, your people know right away and someone can check on you.";
 "onboarding.welcome_cta" = "Get started";
+"onboarding.welcome_disclaimer" = "%@ lets your people know; it is not an emergency service and does not replace 911/112.";
+"onboarding.progress_a11y" = "Step %d of 4";
