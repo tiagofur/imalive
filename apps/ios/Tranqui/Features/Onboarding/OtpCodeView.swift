@@ -36,8 +36,10 @@ struct OtpCodeView: View {
                     isEnabled: model.state.busy == nil && model.state.code.count == Self.codeLength,
                     action: model.verifyTapped
                 )
-                if model.state.busy == .verifying {
-                    BusyRow(label: String(localized: "onboarding.busy_verifying"))
+                if let busy = model.state.busy {
+                    // Both long operations speak: the resend also runs from
+                    // this phase, and its wait copy is "Enviando tu código…".
+                    BusyRow(label: Self.busyCopy(for: busy))
                 } else {
                     Button(String(localized: "onboarding.code_resend")) {
                         model.resendTapped()
@@ -63,6 +65,13 @@ struct OtpCodeView: View {
     }
 
     private static let codeLength = 6
+
+    private static func busyCopy(for busy: OnboardingBusy) -> String {
+        switch busy {
+        case .sendingCode: String(localized: "onboarding.busy_sending_code")
+        case .verifying: String(localized: "onboarding.busy_verifying")
+        }
+    }
 
     /// The stable Problem.code maps to the brief's copy; the raw detail
     /// never reaches the user.
