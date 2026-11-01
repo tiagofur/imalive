@@ -105,4 +105,97 @@ struct NetworkRepositoriesTests {
         )
         #expect(request?.body == expectedBody)
     }
+
+    // MARK: - auth (POST /auth/otp/*)
+
+    @Test func otpRequestPostsThePhoneAndAcceptsThe204Anonymously() async throws {
+        stub(204, "")
+
+        try await NetworkAuthRepository(api: makeAPI(), sessions: sessions).requestOtp(phone: "+5215512345678")
+
+        let request = StubURLProtocol.lastRequest
+        #expect(request?.path == "/v1/auth/otp/request")
+        #expect(request?.body == Data("{\"phone\":\"+5215512345678\"}".utf8))
+        #expect(request?.headers["Authorization"] == nil)
+    }
+
+    @Test func otpVerifyPersistsTheTokenPairInTheSession() async throws {
+        stub(200, Fixtures.tokens)
+        let before = Date()
+
+        try await NetworkAuthRepository(api: makeAPI(), sessions: sessions)
+            .verifyOtp(phone: "+5215512345678", code: "482913")
+
+        let saved = try #require(sessions.currentSession)
+        #expect(saved.accessToken == "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example")
+        #expect(saved.refreshToken == "7f3a9c2e5b1d4a6f8e0c3b5d7a9e1f2a4")
+        // now + expiresInSeconds, within the second the test took.
+        let after = Date()
+        #expect(saved.expiresAt > before.addingTimeInterval(900))
+        #expect(saved.expiresAt < after.addingTimeInterval(900))
+    }
+
+    @Test func otpVerifyWithAnExpiredCodeSurfacesOTPExpiredAndKeepsTheStoredSession() async throws {
+        sessions.store(makeSession())
+        stub(400, Fixtures.otpExpiredProblem)
+
+        do {
+            try await NetworkAuthRepository(api: makeAPI(), sessions: sessions)
+                .verifyOtp(phone: "+5215512345678", code: "111111")
+            Issue.record("expected ApiError")
+        } catch let error as ApiError {
+            #expect(error.code == .otpExpired)
+            #expect(error.httpStatus == 400)
+            // The failed verify does not touch the session that was there.
+            #expect(sessions.currentSession?.accessToken == "access-token-1")
+        } catch {
+            Issue.record("expected ApiError, got \(error)")
+        }
+    }
+
+    // MARK: - contacts (GET/POST /v1/contacts)
+
+    @Test func contactsListsTheCircleFromTheContractExample() async throws {
+        sessions.store(makeSession())
+        stub(200, Fixtures.contactsList)
+
+        let circle = try await NetworkContactsRepository(api: makeAPI()).contacts()
+
+        #expect(circle.count == 2)
+        #expect(circle[0].name == "María")
+        #expect(circle[0].phone == "+5215598765432")
+        #expect(circle[1].name == "Jorge")
+        #expect(StubURLProtocol.lastRequest?.path == "/v1/contacts")
+    }
+
+    @Test func createPostsNameAndPhoneAndReturnsThe201Contact() async throws {
+        sessions.store(makeSession())
+        stub(201, Fixtures.contact)
+
+        let contact = try await NetworkContactsRepository(api: makeAPI())
+            .create(name: "María", phone: "+5215598765432")
+
+        #expect(contact.id == "01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a")
+        #expect(contact.name == "María")
+        #expect(contact.phone == "+5215598765432")
+        #expect(
+            StubURLProtocol.lastRequest?.body == Data("{\"name\":\"María\",\"phone\":\"+5215598765432\"}".utf8)
+        )
+    }
+
+    @Test func createMapsContactLimitReachedToATypedApiError() async throws {
+        sessions.store(makeSession())
+        stub(422, Fixtures.contactLimitProblem)
+
+        do {
+            _ = try await NetworkContactsRepository(api: makeAPI())
+                .create(name: "Jorge", phone: "+5215511223344")
+            Issue.record("expected ApiError")
+        } catch let error as ApiError {
+            #expect(error.code == .contactLimitReached)
+            #expect(error.httpStatus == 422)
+        } catch {
+            Issue.record("expected ApiError, got \(error)")
+        }
+    }
 }

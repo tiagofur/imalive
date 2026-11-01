@@ -95,6 +95,49 @@ enum Fixtures {
       "replayed": false
     }
     """
+
+    /// contracts/openapi.yaml, GET /contacts 200 example.
+    static let contactsList = """
+    {
+      "contacts": [
+        {
+          "id": "01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a",
+          "name": "María",
+          "phone": "+5215598765432",
+          "createdAt": "2026-10-20T15:30:00Z"
+        },
+        {
+          "id": "01934f30-9b3d-7e5f-b06b-3c4d5e6f7a8b",
+          "name": "Jorge",
+          "phone": "+5215511223344",
+          "createdAt": "2026-10-21T10:00:00Z"
+        }
+      ]
+    }
+    """
+
+    /// contracts/openapi.yaml, POST /contacts 201 example.
+    static let contact = """
+    {
+      "id": "01934f2f-8a2c-7d4e-af5a-2b3c4d5e6f7a",
+      "name": "María",
+      "phone": "+5215598765432",
+      "createdAt": "2026-10-20T15:30:00Z"
+    }
+    """
+
+    /// contracts/openapi.yaml, POST /contacts 422 example (verbatim, the
+    /// Spanish detail included).
+    static let contactLimitProblem = """
+    {
+      "type": "https://api.tranqui.app/problems/contact-limit-reached",
+      "title": "Límite de contactos alcanzado",
+      "status": 422,
+      "detail": "El plan gratuito permite hasta 1 contacto. Actualiza a Premium.",
+      "code": "CONTACT_LIMIT_REACHED",
+      "instance": "/v1/contacts"
+    }
+    """
 }
 
 /// Slice 1 of #76: the real client against StubURLProtocol (the idiomatic
