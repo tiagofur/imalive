@@ -1,6 +1,6 @@
 # Estándares de iOS
 
-> Última actualización: 2026-10-29. ADR-0002 (nativo). Stack autorizado en [stack.md](stack.md).
+> Última actualización: 2026-11-01. ADR-0002 (nativo). Stack autorizado en [stack.md](stack.md).
 
 ## Versiones (fijadas en el scaffolding F0)
 
@@ -33,13 +33,15 @@
 
 - **MV con SwiftUI + Observation**: `@Observable` model por feature expone estado; la vista declara UI y envía intents al model. ViewModels tradicionales solo si un flujo lo exige.
 - **Swift Concurrency**: `async/await` en toda la red; `@MainActor` en modelos de UI; `Sendable` verificado por el compilador (Swift 6 estricto). Nada de `DispatchQueue` manual.
-- Capas: `View (SwiftUI)` → `FeatureModel` → `Repository` → `Network` (cliente OpenAPI generado) / `UserDefaults` (solo preferencias).
+- Capas: `View (SwiftUI)` → `FeatureModel` → `Repository` → `Network` (cliente fino del contrato) / `UserDefaults` (solo preferencias).
 - **La lógica de negocio vive en el backend** (igual que Android); repos sin reglas del producto.
 - Errores: `Result`/`throws` mapeados a estado de UI (`ErrorState` con reintento); sin `try!` ni `fatalError` en código de producto.
 
 ## Networking
 
-- Cliente **generado** desde `/contracts/openapi.yaml` (openapi-generator → URLSession async/await) + `AuthInterceptor` con refresh de JWT.
+- **Cliente fino hand-written** sobre `/contracts/openapi.yaml` (`URLSession` + async/await, `Tranqui/Core/Network/TranquiAPI.swift`): DTOs `Codable` nombrados 1:1 con los schemas del contrato y los `examples` del spec como fixtures de test. El openapi-generator degrada OpenAPI 3.1 a 3.0 (`type: [string, 'null']`, igual que en Android); **el cliente generado vuelve cuando la superficie supere ~15 operaciones** (se reevalúa por issue).
+- Errores: `application/problem+json` (RFC 9457) → `ApiError` con el `code` de negocio y el `Retry-After` parseado; los fallos de transporte quedan como `URLError` (offline ≠ respuesta de negocio).
+- **Bearer attach** en cada llamada protegida (desde la caché de sesión, nunca un hit de Keychain por request) y **refresh single-flight** sobre `POST /auth/refresh`: 401 del refresh invalida la sesión; un refresh inalcanzable (offline) la conserva.
 - Base URL por configuración de build (`Debug` → staging/sandbox; `Release` → prod).
 
 ## Notificaciones y superficies nativas
@@ -52,7 +54,7 @@
 
 ## Datos locales
 
-- `UserDefaults`/SwiftData solo para preferencias y token; el estado de negocio vive en el backend.
+- `UserDefaults`/SwiftData solo para preferencias (p. ej. el paso actual del onboarding); los **tokens de sesión viven en el Keychain** (`kSecClassGenericPassword`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`): nunca en UserDefaults ni en logs. El estado de negocio vive en el backend.
 
 ## Calidad
 
