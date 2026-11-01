@@ -33,9 +33,10 @@ class WelcomeScreenTest {
         composeRule
             .onNodeWithText("Un toque al día para que los que te quieren sepan que estás bien.")
             .assertIsDisplayed()
-        composeRule
-            .onNodeWithText("Si un día no confirmas, tu gente lo sabe al instante y alguien puede comprobar cómo estás.")
-            .assertIsDisplayed()
+        val sub =
+            "Si un día no confirmas, tu gente lo sabe al instante " +
+                "y alguien puede comprobar cómo estás."
+        composeRule.onNodeWithText(sub).assertIsDisplayed()
         composeRule.onNodeWithText("Empezar").assertIsDisplayed()
         composeRule.onNodeWithText("Empezar").performClick()
         assertEquals(true, started)

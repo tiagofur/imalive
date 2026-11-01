@@ -214,25 +214,22 @@ class OnboardingViewModel
 
                 ApiErrorCode.RATE_LIMITED -> {
                     _uiState.update { it.copy(busy = null) }
-                    startCooldown(error.retryAfterSeconds ?: DEFAULT_COOLDOWN_SECONDS)
+                    // Real countdown from the Retry-After header (or the
+                    // 60 s default when the header is missing or invalid,
+                    // plan of issue #75): it disables the resend while live.
+                    cooldownJob?.cancel()
+                    cooldownJob =
+                        viewModelScope.launch {
+                            for (remaining in (error.retryAfterSeconds ?: DEFAULT_COOLDOWN_SECONDS) downTo 1) {
+                                _uiState.update { it.copy(rateLimitSeconds = remaining) }
+                                delay(COOLDOWN_TICK_MS)
+                            }
+                            _uiState.update { it.copy(rateLimitSeconds = 0) }
+                        }
                 }
 
                 else -> fallback()
             }
-        }
-
-        // Real countdown from the Retry-After header (or the 60 s default
-        // when the header is missing or invalid, plan of issue #75).
-        private fun startCooldown(seconds: Int) {
-            cooldownJob?.cancel()
-            cooldownJob =
-                viewModelScope.launch {
-                    for (remaining in seconds downTo 1) {
-                        _uiState.update { it.copy(rateLimitSeconds = remaining) }
-                        delay(COOLDOWN_TICK_MS)
-                    }
-                    _uiState.update { it.copy(rateLimitSeconds = 0) }
-                }
         }
 
         private companion object {
