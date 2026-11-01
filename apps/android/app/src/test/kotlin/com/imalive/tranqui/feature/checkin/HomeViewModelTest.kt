@@ -40,7 +40,7 @@ class HomeViewModelTest {
     ) : ProfileRepository {
         override suspend fun profile(): Profile = profile
 
-        override suspend fun update(patch: ProfilePatch) { }
+        override suspend fun update(patch: ProfilePatch) = Unit
     }
 
     private class ExplodingRepo : ProfileRepository {

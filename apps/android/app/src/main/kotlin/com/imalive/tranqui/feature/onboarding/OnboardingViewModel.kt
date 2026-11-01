@@ -127,9 +127,14 @@ internal fun LocalTime.hhmm(): String = String.format(Locale.ROOT, "%02d:%02d", 
 
 // The picker's proposal (brief paso 3): "una hora tranquila para avisar que
 // el día cerró bien".
-private val DEFAULT_CHECKIN_TIME: LocalTime = LocalTime.of(21, 0)
+private const val SUGGESTED_CHECKIN_HOUR = 21
+private val DEFAULT_CHECKIN_TIME: LocalTime = LocalTime.of(SUGGESTED_CHECKIN_HOUR, 0)
 
 @HiltViewModel
+// The plan of issue #75 mandates ONE step machine for the five linear
+// destinations; every user intent is a small named function on it, so the
+// function count is the design, not a smell.
+@Suppress("TooManyFunctions")
 class OnboardingViewModel
     @Inject
     constructor(
