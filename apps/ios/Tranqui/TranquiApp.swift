@@ -53,6 +53,9 @@ struct TranquiApp: App {
                 refreshToken: "smoke-refresh-token",
                 expiresAt: Date().addingTimeInterval(900)
             ))
+            // The smoke user is past the onboarding (slice 4: the gate needs
+            // session AND the finished flag to land home).
+            persisting.setOnboardingComplete(true)
         }
         return persisting
     }
