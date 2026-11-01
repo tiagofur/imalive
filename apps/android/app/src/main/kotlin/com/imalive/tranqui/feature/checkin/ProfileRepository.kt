@@ -27,9 +27,12 @@ interface ProfileRepository {
 
     /**
      * Partial update (PATCH /v1/me; issue #75 slice 4): the ritual step saves
-     * name + check-in time + the device timezone. Returns the stored profile.
+     * name + check-in time + the device timezone. The response body is
+     * deliberately not decoded — the current backend's PATCH answer omits
+     * streakDays (a contract deviation, tracked backend-side) and the caller
+     * needs nothing from it.
      */
-    suspend fun update(patch: ProfilePatch): Profile
+    suspend fun update(patch: ProfilePatch)
 }
 
 // Real read/update of /v1/me (issue #75 slices 2 and 4; replaces the F0
@@ -44,7 +47,9 @@ class NetworkProfileRepository
     ) : ProfileRepository {
         override suspend fun profile(): Profile = profileOf(apiCall(json) { api.getProfile() })
 
-        override suspend fun update(patch: ProfilePatch): Profile = profileOf(apiCall(json) { api.updateProfile(patch) })
+        override suspend fun update(patch: ProfilePatch) {
+            apiCall(json) { api.updateProfile(patch) } // 200, body not consumed
+        }
 
         private fun profileOf(dto: UserProfile): Profile =
             Profile(

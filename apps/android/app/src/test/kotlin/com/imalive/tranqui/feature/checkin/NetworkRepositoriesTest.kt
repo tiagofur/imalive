@@ -102,12 +102,10 @@ class NetworkRepositoriesTest {
         runBlocking {
             server.enqueue(jsonResponse(200, PROFILE_PATCHED_EXAMPLE))
 
-            val profile =
-                profiles.update(
-                    ProfilePatch(name = "Ana", checkinTime = "21:00", timezone = "America/Mexico_City"),
-                )
+            profiles.update(
+                ProfilePatch(name = "Ana", checkinTime = "21:00", timezone = "America/Mexico_City"),
+            )
 
-            assertEquals("21:00", profile.checkinTime)
             val recorded = server.takeRequest()
             assertEquals("PATCH", recorded.method)
             assertEquals("/v1/me", recorded.target)
@@ -115,6 +113,33 @@ class NetworkRepositoriesTest {
                 """{"name":"Ana","checkinTime":"21:00","timezone":"America/Mexico_City"}""",
                 recorded.body!!.utf8(),
             )
+        }
+
+    @Test
+    fun `update survives the backend body that omits streakDays until the backend honors the contract`() =
+        runBlocking {
+            // The live backend answers PATCH with profileOf(user), without
+            // streakDays (contract deviation, tracked backend-side); the
+            // ritual must not die decoding a body it does not consume.
+            server.enqueue(
+                jsonResponse(
+                    200,
+                    """
+                    {
+                      "id": "01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f",
+                      "name": "Ana",
+                      "phone": "+5215512345678",
+                      "checkinTime": "21:00",
+                      "timezone": "America/Mexico_City",
+                      "escalationWindowMinutes": 60
+                    }
+                    """.trimIndent(),
+                ),
+            )
+
+            profiles.update(ProfilePatch(name = "Ana", checkinTime = "21:00", timezone = "America/Mexico_City"))
+
+            assertEquals("/v1/me", server.takeRequest().target)
         }
 
     @Test

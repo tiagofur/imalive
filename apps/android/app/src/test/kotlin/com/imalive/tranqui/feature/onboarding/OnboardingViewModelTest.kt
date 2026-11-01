@@ -77,11 +77,10 @@ internal class FakeProfiles : ProfileRepository {
 
     override suspend fun profile(): Profile = Profile(streakDays = 0, checkinTime = "21:00")
 
-    override suspend fun update(patch: ProfilePatch): Profile {
+    override suspend fun update(patch: ProfilePatch) {
         updateCalls++
         lastPatch = patch
         error?.let { throw it }
-        return Profile(streakDays = 0, checkinTime = patch.checkinTime ?: "21:00")
     }
 }
 

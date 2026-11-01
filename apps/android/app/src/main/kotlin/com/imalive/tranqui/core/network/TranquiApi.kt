@@ -47,10 +47,14 @@ interface TranquiApi {
     @GET("me")
     suspend fun getProfile(): Response<UserProfile>
 
+    // The PATCH response body is not consumed: the contract declares a full
+    // UserProfile, but the current backend omits streakDays on PATCH (see
+    // profile.update in ProfileRepository). Decoding nothing keeps the client
+    // alive until the backend honors the shape; home re-reads GET /me.
     @PATCH("me")
     suspend fun updateProfile(
         @Body body: ProfilePatch,
-    ): Response<UserProfile>
+    ): Response<Unit>
 
     // contacts.
     @GET("contacts")

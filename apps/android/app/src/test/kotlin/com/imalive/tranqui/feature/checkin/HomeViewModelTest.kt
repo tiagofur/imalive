@@ -40,13 +40,13 @@ class HomeViewModelTest {
     ) : ProfileRepository {
         override suspend fun profile(): Profile = profile
 
-        override suspend fun update(patch: ProfilePatch): Profile = profile
+        override suspend fun update(patch: ProfilePatch) { }
     }
 
     private class ExplodingRepo : ProfileRepository {
         override suspend fun profile(): Profile = throw java.io.IOException("network down")
 
-        override suspend fun update(patch: ProfilePatch): Profile = throw java.io.IOException("network down")
+        override suspend fun update(patch: ProfilePatch): Unit = throw java.io.IOException("network down")
     }
 
     private class CountingRepo(
@@ -60,9 +60,8 @@ class HomeViewModelTest {
             return profile
         }
 
-        override suspend fun update(patch: ProfilePatch): Profile {
+        override suspend fun update(patch: ProfilePatch) {
             calls++
-            return profile
         }
     }
 
