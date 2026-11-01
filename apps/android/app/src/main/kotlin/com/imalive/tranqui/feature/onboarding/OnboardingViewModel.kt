@@ -143,7 +143,7 @@ class OnboardingViewModel
             }
         }
 
-        private fun sendCode() {
+        private fun sendCode(markExpiredOnSuccess: Boolean = false) {
             val phone = _uiState.value.phone
             viewModelScope.launch {
                 _uiState.update {
@@ -151,33 +151,21 @@ class OnboardingViewModel
                 }
                 try {
                     auth.requestOtp(phone)
-                    _uiState.update { it.copy(busy = null, step = OnboardingStep.CODE) }
+                    _uiState.update {
+                        it.copy(
+                            busy = null,
+                            step = OnboardingStep.CODE,
+                            // The brief's expiry flow: when the fresh code of
+                            // the auto-reenvío lands, the copy says so.
+                            codeError = if (markExpiredOnSuccess) CodeError.EXPIRED else null,
+                        )
+                    }
                 } catch (error: ApiError) {
                     onApiError(error) {
                         _uiState.update { it.copy(busy = null, phoneError = PhoneError.RETRY) }
                     }
                 } catch (_: IOException) {
                     _uiState.update { it.copy(busy = null, phoneError = PhoneError.OFFLINE) }
-                }
-            }
-        }
-
-        // The re-send that OTP_EXPIRED triggers by itself: the step stays on
-        // CODE and the settled state carries the expired copy forward (the
-        // user's typed code is still there to rewrite).
-        private fun resendAfterExpiry() {
-            val phone = _uiState.value.phone
-            viewModelScope.launch {
-                _uiState.update { it.copy(busy = OnboardingBusy.SENDING_CODE, phoneError = null) }
-                try {
-                    auth.requestOtp(phone)
-                    _uiState.update { it.copy(busy = null, codeError = CodeError.EXPIRED) }
-                } catch (error: ApiError) {
-                    onApiError(error) {
-                        _uiState.update { it.copy(busy = null, codeError = CodeError.RETRY) }
-                    }
-                } catch (_: IOException) {
-                    _uiState.update { it.copy(busy = null, codeError = CodeError.OFFLINE) }
                 }
             }
         }
@@ -221,7 +209,7 @@ class OnboardingViewModel
                     // Auto-reenvío (brief paso 2): a fresh code goes out; when
                     // it lands, the copy confirms it ("El código caducó. Te
                     // enviamos uno nuevo.").
-                    resendAfterExpiry()
+                    sendCode(markExpiredOnSuccess = true)
                 }
 
                 ApiErrorCode.RATE_LIMITED -> {
@@ -241,7 +229,7 @@ class OnboardingViewModel
                 viewModelScope.launch {
                     for (remaining in seconds downTo 1) {
                         _uiState.update { it.copy(rateLimitSeconds = remaining) }
-                        delay(1_000)
+                        delay(COOLDOWN_TICK_MS)
                     }
                     _uiState.update { it.copy(rateLimitSeconds = 0) }
                 }
@@ -250,6 +238,7 @@ class OnboardingViewModel
         private companion object {
             const val CODE_LENGTH = 6
             const val DEFAULT_COOLDOWN_SECONDS = 60
+            const val COOLDOWN_TICK_MS = 1_000L
 
             // E.164: + followed by 8–15 digits, country code not starting 0.
             val E164 = Regex("""^\+[1-9]\d{7,14}$""")

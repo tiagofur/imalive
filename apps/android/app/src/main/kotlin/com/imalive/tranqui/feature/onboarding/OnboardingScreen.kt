@@ -60,10 +60,15 @@ fun OnboardingScreen(
 
 // Welcome is segment 1; the two OTP phases share segment 2 (brief: 4 pasos
 // visibles, teléfono y código son el paso 2).
+private const val SEGMENT_WELCOME = 1
+private const val SEGMENT_AUTH = 2
+private const val SEGMENT_RITUAL = 3
+private const val SEGMENT_CONTACT = 4
+
 private fun OnboardingStep.progressSegment(): Int =
     when (this) {
-        OnboardingStep.WELCOME -> 1
-        OnboardingStep.PHONE, OnboardingStep.CODE -> 2
-        OnboardingStep.RITUAL -> 3
-        OnboardingStep.CONTACT -> 4
+        OnboardingStep.WELCOME -> SEGMENT_WELCOME
+        OnboardingStep.PHONE, OnboardingStep.CODE -> SEGMENT_AUTH
+        OnboardingStep.RITUAL -> SEGMENT_RITUAL
+        OnboardingStep.CONTACT -> SEGMENT_CONTACT
     }

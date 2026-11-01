@@ -127,36 +127,55 @@ fun OtpVerifyScreen(
                 )
             }
         }
-        Column(Modifier.fillMaxWidth()) {
-            if (uiState.rateLimitSeconds > 0) {
-                RateLimitCopy(uiState.rateLimitSeconds)
-            }
-            // The backup "Entrar" of the brief: the auto-verify already ran
-            // at the sixth digit; this is the manual path (autofill failed).
-            HeroButton(
-                text = stringResource(R.string.onboarding_code_enter),
-                onClick = onVerifyClicked,
-                enabled = uiState.busy == null && uiState.code.length == CODE_LENGTH,
-            )
-            if (uiState.busy != null) {
-                BusyCopy(
-                    if (uiState.busy == OnboardingBusy.SENDING_CODE) {
-                        R.string.onboarding_busy_sending_code
-                    } else {
-                        R.string.onboarding_busy_verifying
-                    },
-                )
-            } else {
-                TextButton(
-                    onClick = onResendClicked,
-                    enabled = uiState.rateLimitSeconds == 0,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Text(stringResource(R.string.onboarding_code_resend))
-                }
-            }
-            Spacer(Modifier.height(24.dp))
+        CodeActions(
+            busy = uiState.busy,
+            codeReady = uiState.code.length == CODE_LENGTH,
+            rateLimitSeconds = uiState.rateLimitSeconds,
+            onVerifyClicked = onVerifyClicked,
+            onResendClicked = onResendClicked,
+        )
+    }
+}
+
+// The bottom block of the verify phase: the backup "Entrar" (the
+// auto-verify already ran at the sixth digit; this is the manual path),
+// the busy copy or the resend with its live cooldown.
+@Composable
+@Suppress("ktlint:standard:function-naming") // PascalCase is the Compose convention
+private fun CodeActions(
+    busy: OnboardingBusy?,
+    codeReady: Boolean,
+    rateLimitSeconds: Int,
+    onVerifyClicked: () -> Unit,
+    onResendClicked: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        if (rateLimitSeconds > 0) {
+            RateLimitCopy(rateLimitSeconds)
         }
+        HeroButton(
+            text = stringResource(R.string.onboarding_code_enter),
+            onClick = onVerifyClicked,
+            enabled = busy == null && codeReady,
+        )
+        if (busy != null) {
+            BusyCopy(
+                if (busy == OnboardingBusy.SENDING_CODE) {
+                    R.string.onboarding_busy_sending_code
+                } else {
+                    R.string.onboarding_busy_verifying
+                },
+            )
+        } else {
+            TextButton(
+                onClick = onResendClicked,
+                enabled = rateLimitSeconds == 0,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                Text(stringResource(R.string.onboarding_code_resend))
+            }
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }
 

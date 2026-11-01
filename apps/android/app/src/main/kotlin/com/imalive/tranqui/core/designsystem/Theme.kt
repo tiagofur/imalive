@@ -1,3 +1,10 @@
+@file:Suppress("MagicNumber")
+// The provisional theme (issue #75 slice 3): /design/tokens.json does not
+// exist yet and brand/primary awaits the product name (#5), so the brief's
+// supuesto applies — ok/primary stands in as the hero color. This file is
+// the home of named tokens: its literals ARE the values (pending the
+// generator), so MagicNumber is suppressed by design.
+
 package com.imalive.tranqui.core.designsystem
 
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -11,10 +18,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// The provisional theme (issue #75 slice 3): /design/tokens.json does not
-// exist yet and brand/primary awaits the product name (#5), so the brief's
-// supuesto applies — ok/primary stands in as the hero color. These are the
-// only hardcoded values of the app, in this one file, until the tokens
+// The token values live in this one file until the tokens
 // generator replaces them (design-system.md; TODO #5 / tokens.json).
 private val OkPrimaryLight = Color(0xFF2E7D5B) // ok/primary, AA sobre blanco
 private val OkPrimaryDark = Color(0xFF8AD6AE) // ok/primary lifted for dark AA

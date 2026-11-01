@@ -49,8 +49,9 @@ class WelcomeScreenTest {
             }
         }
 
-        composeRule
-            .onNodeWithText("Tranqui avisa a tu gente; no es un servicio de emergencia y no sustituye al 911/112.")
-            .assertIsDisplayed()
+        val disclaimer =
+            "Tranqui avisa a tu gente; " +
+                "no es un servicio de emergencia y no sustituye al 911/112."
+        composeRule.onNodeWithText(disclaimer).assertIsDisplayed()
     }
 }
