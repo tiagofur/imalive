@@ -1,5 +1,9 @@
 package com.imalive.tranqui.di
 
+import com.imalive.tranqui.feature.checkin.AuthRepository
+import com.imalive.tranqui.feature.checkin.ContactsRepository
+import com.imalive.tranqui.feature.checkin.NetworkAuthRepository
+import com.imalive.tranqui.feature.checkin.NetworkContactsRepository
 import com.imalive.tranqui.feature.checkin.NetworkProfileRepository
 import com.imalive.tranqui.feature.checkin.ProfileRepository
 import dagger.Binds
@@ -14,4 +18,10 @@ import dagger.hilt.components.SingletonComponent
 abstract class RepositoryModule {
     @Binds
     abstract fun bindProfileRepository(impl: NetworkProfileRepository): ProfileRepository
+
+    @Binds
+    abstract fun bindAuthRepository(impl: NetworkAuthRepository): AuthRepository
+
+    @Binds
+    abstract fun bindContactsRepository(impl: NetworkContactsRepository): ContactsRepository
 }
