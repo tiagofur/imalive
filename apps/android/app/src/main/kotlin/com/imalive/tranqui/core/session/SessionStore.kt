@@ -2,6 +2,7 @@ package com.imalive.tranqui.core.session
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -35,10 +36,20 @@ data class StoredSession(
 interface SessionStore {
     val session: Flow<StoredSession?>
 
+    /**
+     * The onboarding finished flag (issue #75 slice 4): the session alone is
+     * not enough to land home — the ritual and the trusted contact (or the
+     * honest skip) must close the flow first. clear() resets it.
+     */
+    val onboardingComplete: Flow<Boolean>
+
     suspend fun save(session: StoredSession)
 
     /** Attaches (or replaces) the user phone without touching the tokens. */
     suspend fun saveUserPhone(phone: String)
+
+    /** Marks the onboarding as finished; the gate then lets the user into home. */
+    suspend fun completeOnboarding()
 
     /** Wipes the session: used on logout and on a rejected refresh. */
     suspend fun clear()
@@ -64,6 +75,9 @@ class DataStoreSessionStore
 
         override val session: Flow<StoredSession?> = dataStore.data.map(::fromPreferences)
 
+        override val onboardingComplete: Flow<Boolean> =
+            dataStore.data.map { it[ONBOARDING_COMPLETE] ?: false }
+
         override suspend fun save(session: StoredSession) {
             dataStore.edit { prefs ->
                 prefs[ACCESS_TOKEN] = session.accessToken
@@ -79,6 +93,10 @@ class DataStoreSessionStore
             dataStore.edit { it[USER_PHONE] = phone }
             val current = cachedSession()
             if (current != null) cache = current.copy(userPhone = phone)
+        }
+
+        override suspend fun completeOnboarding() {
+            dataStore.edit { it[ONBOARDING_COMPLETE] = true }
         }
 
         override suspend fun clear() {
@@ -120,5 +138,6 @@ class DataStoreSessionStore
             val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
             val EXPIRES_AT = longPreferencesKey("expires_at_epoch_seconds")
             val USER_PHONE = stringPreferencesKey("user_phone")
+            val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         }
     }

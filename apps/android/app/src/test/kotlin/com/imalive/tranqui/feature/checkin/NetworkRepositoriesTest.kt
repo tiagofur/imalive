@@ -7,6 +7,7 @@ import com.imalive.tranqui.core.network.ApiErrorCode
 import com.imalive.tranqui.core.network.AuthInterceptor
 import com.imalive.tranqui.core.network.FakeSessionStore
 import com.imalive.tranqui.core.network.TranquiApi
+import com.imalive.tranqui.core.network.dto.ProfilePatch
 import com.imalive.tranqui.core.session.StoredSession
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -94,6 +95,26 @@ class NetworkRepositoriesTest {
 
             assertEquals(12, profile.streakDays)
             assertNull(profile.pauseUntil)
+        }
+
+    @Test
+    fun `update posts the ritual patch with only the fields the onboarding sets`() =
+        runBlocking {
+            server.enqueue(jsonResponse(200, PROFILE_PATCHED_EXAMPLE))
+
+            val profile =
+                profiles.update(
+                    ProfilePatch(name = "Ana", checkinTime = "21:00", timezone = "America/Mexico_City"),
+                )
+
+            assertEquals("21:00", profile.checkinTime)
+            val recorded = server.takeRequest()
+            assertEquals("PATCH", recorded.method)
+            assertEquals("/v1/me", recorded.target)
+            assertEquals(
+                """{"name":"Ana","checkinTime":"21:00","timezone":"America/Mexico_City"}""",
+                recorded.body!!.utf8(),
+            )
         }
 
     @Test
@@ -268,6 +289,20 @@ class NetworkRepositoriesTest {
               "detail": "The code expired; request a new one.",
               "code": "OTP_EXPIRED",
               "instance": "/v1/auth/otp/verify"
+            }
+            """.trimIndent()
+
+        // contracts/openapi.yaml, PATCH /me 200 example (the ritual fields).
+        private val PROFILE_PATCHED_EXAMPLE: String =
+            """
+            {
+              "id": "01934f2e-7a1b-7c3d-9e4f-1a2b3c4d5e6f",
+              "name": "Ana",
+              "phone": "+5215512345678",
+              "checkinTime": "21:00",
+              "timezone": "America/Mexico_City",
+              "escalationWindowMinutes": 60,
+              "streakDays": 0
             }
             """.trimIndent()
 
