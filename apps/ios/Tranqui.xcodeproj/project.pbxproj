@@ -13,6 +13,7 @@
 		11DBEFF06CF535EC2B59D06D /* TranquiAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7DAD8C55EBD949A54ECCE6 /* TranquiAPI.swift */; };
 		29F6373951CA6E4ED2803D6E /* OnboardingPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C1195A1542E1D5F999985AF /* OnboardingPlaceholderView.swift */; };
 		3121B9587886832D88FFB80C /* KeychainSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E39757670328AAD27EF446D /* KeychainSessionStore.swift */; };
+		3587C4EDCE8B6B644E9978F1 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CCAE3C3EF5956AC981F0E4 /* DesignTokens.swift */; };
 		3E371D0B9211FE4FBAA9F7C8 /* TranquiAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A3A625E98A972A4F4AEEF7 /* TranquiAPITests.swift */; };
 		4F4A84871115138020BCA2E1 /* TokenRefresherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A86274A6067D9503FE77A668 /* TokenRefresherTests.swift */; };
 		58B41B8FF90D65D1BC6B5BC0 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F902D7D99FEBE95027C97DC5 /* AuthRepository.swift */; };
@@ -25,9 +26,11 @@
 		AD0CF5C625B5ACC36E45740A /* DTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3937E62FBD31D0C1CA25CB49 /* DTOs.swift */; };
 		BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F840AAEA2345DC777F1AB89F /* HomeModel.swift */; };
 		C3C1ACA0E34C2167D41E0FF9 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CA33BAED73D6F505578403 /* ProfileRepository.swift */; };
+		C52191CE6A26B2ADABC0335F /* DesignTokensTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61411D7CE9DB445E20BA66FB /* DesignTokensTests.swift */; };
 		CC16FE753E9DDF5A3A6F0811 /* FakeSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C836DF20C3E8C2AE8804C69B /* FakeSessionStore.swift */; };
 		D71206DDE86D1B09B25DA5DF /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D06B58E8C4C4BAF859F891 /* SessionStore.swift */; };
 		D8A068065ACDEB5653DEDEFE /* ApiError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18B47ED367C19D5EE2A8197D /* ApiError.swift */; };
+		DE1CD4A462C548921900DCF1 /* HeroButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E350203A39C0C14AA324263 /* HeroButton.swift */; };
 		DFF0058ED22E65748CD02385 /* SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD215F0557DFEEBB8439BB25 /* SessionStoreTests.swift */; };
 		E0BAD0363F0AFEACF1D88B0B /* ContactsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E252502522D72860AF93786 /* ContactsRepository.swift */; };
 		E0C7BD3E1E028910A708128F /* TranquiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5C943B16A0B544C4892340 /* TranquiApp.swift */; };
@@ -60,11 +63,14 @@
 		3937E62FBD31D0C1CA25CB49 /* DTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DTOs.swift; sourceTree = "<group>"; };
 		4704AAD079F1BE42208DD025 /* pt */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = pt; path = pt.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4845F5B919453845074D7BC3 /* Tranqui.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tranqui.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61411D7CE9DB445E20BA66FB /* DesignTokensTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokensTests.swift; sourceTree = "<group>"; };
 		692440EA8FA22B66747BCE05 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		6C1195A1542E1D5F999985AF /* OnboardingPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPlaceholderView.swift; sourceTree = "<group>"; };
 		7B8FC9AE53F1621DD5808809 /* NetworkRepositoriesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkRepositoriesTests.swift; sourceTree = "<group>"; };
+		7E350203A39C0C14AA324263 /* HeroButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroButton.swift; sourceTree = "<group>"; };
 		7E5C943B16A0B544C4892340 /* TranquiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranquiApp.swift; sourceTree = "<group>"; };
 		804FD4772BAEFD3CEF1BB253 /* TokenRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefresher.swift; sourceTree = "<group>"; };
+		87CCAE3C3EF5956AC981F0E4 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		8E39757670328AAD27EF446D /* KeychainSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSessionStore.swift; sourceTree = "<group>"; };
 		9E252502522D72860AF93786 /* ContactsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsRepository.swift; sourceTree = "<group>"; };
 		9E668640F614E0417E7D351D /* InMemoryPersisting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryPersisting.swift; sourceTree = "<group>"; };
@@ -151,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				39D2FFD5EC838B05CFA3EE37 /* CheckIn */,
+				A61CFB35E367917C748A6286 /* DesignSystem */,
 				889AC2279B2A35589E09D62B /* Network */,
 				91ED66C68CD8D65DEFD62836 /* Session */,
 			);
@@ -185,6 +192,23 @@
 				AD215F0557DFEEBB8439BB25 /* SessionStoreTests.swift */,
 			);
 			path = Session;
+			sourceTree = "<group>";
+		};
+		9946CC9C39E937D863DDFAFE /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				87CCAE3C3EF5956AC981F0E4 /* DesignTokens.swift */,
+				7E350203A39C0C14AA324263 /* HeroButton.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		A61CFB35E367917C748A6286 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				61411D7CE9DB445E20BA66FB /* DesignTokensTests.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 		B01EC226BB08940BBE3DAE3D /* Circle */ = {
@@ -225,6 +249,7 @@
 		DBB712E186370533D293188C /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				9946CC9C39E937D863DDFAFE /* DesignSystem */,
 				5B62EB4409E208969920B133 /* Network */,
 				15F1F465332D2780D9872554 /* Session */,
 			);
@@ -362,6 +387,8 @@
 				E0BAD0363F0AFEACF1D88B0B /* ContactsRepository.swift in Sources */,
 				8B53C09A16165213C97516E4 /* ContentView.swift in Sources */,
 				AD0CF5C625B5ACC36E45740A /* DTOs.swift in Sources */,
+				3587C4EDCE8B6B644E9978F1 /* DesignTokens.swift in Sources */,
+				DE1CD4A462C548921900DCF1 /* HeroButton.swift in Sources */,
 				BF6EC6BEFE454B9DE1FEF2D2 /* HomeModel.swift in Sources */,
 				8DED261F5B99177B51BDB8B2 /* HomeView.swift in Sources */,
 				3121B9587886832D88FFB80C /* KeychainSessionStore.swift in Sources */,
@@ -379,6 +406,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C52191CE6A26B2ADABC0335F /* DesignTokensTests.swift in Sources */,
 				CC16FE753E9DDF5A3A6F0811 /* FakeSessionStore.swift in Sources */,
 				0A55CD642199CC93D87C1D68 /* HomeModelTests.swift in Sources */,
 				0C0781E1200802AD52AAFF35 /* InMemoryPersisting.swift in Sources */,
