@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
@@ -17,8 +18,8 @@ enum class HomeGate {
     // The session store has not answered yet (first DataStore read).
     LOADING,
 
-    // No session: the onboarding entry point owns the screen (slice 3
-    // replaces the placeholder with the real welcome flow).
+    // No session, or the session exists but the onboarding has not finished
+    // (slice 4): the onboarding flow owns the screen.
     NEEDS_ONBOARDING,
 
     // Session present: the home, with the real streak.
@@ -47,18 +48,21 @@ class HomeViewModel
 
         init {
             // The gate collects (not reads once): the first store answer
-            // decides where the app starts; a session saved later (the OTP
-            // verify of slice 3+) lands the user on home; a session wiped by
-            // the authenticator (rejected refresh) walks them back. Token
+            // decides where the app starts. A session alone is not enough
+            // (slice 4): the onboarding must finish first — the ritual saves
+            // the profile and the trusted contact (or the honest skip) calls
+            // completeOnboarding(). Then home lands; a session wiped by the
+            // authenticator (rejected refresh) walks them back. Token
             // rotations also emit here — they must not reload anything.
             viewModelScope.launch {
-                sessions.session.collect { session ->
+                combine(sessions.session, sessions.onboardingComplete, ::Pair).collect { pair ->
+                    val (session, complete) = pair
                     val gate = _uiState.value.gate
                     when {
-                        session == null && gate != HomeGate.NEEDS_ONBOARDING ->
+                        (session == null || !complete) && gate != HomeGate.NEEDS_ONBOARDING ->
                             _uiState.value = HomeUiState(gate = HomeGate.NEEDS_ONBOARDING)
 
-                        session != null && gate != HomeGate.READY -> {
+                        session != null && complete && gate != HomeGate.READY -> {
                             _uiState.value = _uiState.value.copy(gate = HomeGate.READY)
                             loadStreak()
                         }

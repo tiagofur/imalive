@@ -5,6 +5,7 @@
     <string name="checkin_button_ok">Estoy OK</string>
     <string name="home_next_checkin">Siguiente check-in: %1$s</string>
     <string name="home_streak_days">%1$d días seguidos 🔥</string>
+    <string name="home_streak_zero">Tu racha empieza hoy.</string>
     <string name="home_streak_frozen">Pausa activa · racha congelada</string>
     <!-- Onboarding (issue #75). Copy del brief UX. "Tranqui" es placeholder
          del nombre de producto (#5): todo copy que dependa del nombre
@@ -27,6 +28,50 @@
     <string name="onboarding_code_resend">Enviarlo de nuevo</string>
     <string name="onboarding_busy_sending_code">Enviando tu código…</string>
     <string name="onboarding_busy_verifying">Verificando…</string>
+    <!-- Paso 3: el ritual (nombre + hora + pre-permiso just-in-time, nunca
+         en frío). La zona horaria es la del dispositivo, sin edición. -->
+    <string name="onboarding_ritual_title">¿Cómo te llamas?</string>
+    <string name="onboarding_ritual_name_label">Tu nombre</string>
+    <string name="onboarding_ritual_name_error">Escríbenos tu nombre: así te llamará tu gente.</string>
+    <string name="onboarding_ritual_time_title">¿A qué hora te recordamos cada día?</string>
+    <string name="onboarding_ritual_time_sub">Te sugerimos las 21:00: una hora tranquila para avisar que el día cerró bien. Elige la tuya.</string>
+    <string name="onboarding_ritual_time_label">Tu hora de check-in</string>
+    <string name="onboarding_ritual_time_change">Cambiar</string>
+    <string name="onboarding_ritual_time_a11y">Elegir la hora del recordatorio. Actualmente %1$s.</string>
+    <string name="onboarding_ritual_time_ok">Aceptar</string>
+    <string name="onboarding_ritual_time_cancel">Cancelar</string>
+    <string name="onboarding_ritual_cta">Continuar</string>
+    <string name="onboarding_permission_title">Te avisaremos a las %1$s con una notificación tranquila. Nada de alarma.</string>
+    <string name="onboarding_permission_allow">Permitir notificaciones</string>
+    <string name="onboarding_permission_decline">Ahora no</string>
+    <string name="onboarding_permission_answered">Puedes activarla cuando quieras.</string>
+    <string name="onboarding_busy_saving">Guardando tus datos…</string>
+    <!-- Paso 4: el momento "añade a tu mamá" (R-03). La burbuja ESPEJA el
+         texto real que el backend envía (welcomeMessageV1 en
+         backend/internal/circle/http.go): si el template cambia allí, cambia
+         esta única string (follow-up: endpoint additive que elimine el
+         espejo). Los placeholders solo existen en el preview vacío; el envío
+         real nunca lleva nombres en blanco (la API exige 1..80). -->
+    <string name="onboarding_contact_title">¿Quién te pregunta si llegaste bien?</string>
+    <string name="onboarding_contact_sub">Invita a esa persona de confianza. Le llega hoy un mensaje como este:</string>
+    <string name="onboarding_contact_welcome_message">%1$s: %2$s te ha añadido como persona de confianza en %3$s, la app con la que confirma a diario que está bien. No tienes que hacer nada. Solo te escribiremos si %2$s pasa muchas horas sin confirmar, para que puedas comprobar cómo está. %3$s es un servicio de avisos entre personas; no es un servicio de emergencias.</string>
+    <string name="onboarding_contact_preview_you">[tu nombre]</string>
+    <string name="onboarding_contact_preview_them">[su nombre]</string>
+    <string name="onboarding_contact_name_label">Su nombre</string>
+    <string name="onboarding_contact_phone_label">Su teléfono</string>
+    <string name="onboarding_contact_phone_hint">+52 55 1234 5678</string>
+    <string name="onboarding_contact_cta_named">Avisar a %1$s por WhatsApp</string>
+    <string name="onboarding_contact_cta">Enviar invitación por WhatsApp</string>
+    <string name="onboarding_contact_skip">Lo haré después</string>
+    <string name="onboarding_busy_sending_invite">Enviando tu invitación…</string>
+    <string name="onboarding_error_contact_phone">El teléfono debe incluir el país, por ejemplo +52 55 1234 5678.</string>
+    <string name="onboarding_error_contact_offline">No se envió. Tu invitación queda lista — reintenta cuando tengas internet.</string>
+    <string name="onboarding_contact_limit">Por ahora tu plan guarda 1 contacto. Añade más cuando quieras desde Tu círculo.</string>
+    <string name="onboarding_contact_sent">Listo. %1$s ya sabe que desde hoy cuentas con ella.</string>
+    <string name="onboarding_contact_invite_another">Invitar a otra persona</string>
+    <string name="onboarding_contact_finish">Ir al inicio</string>
+    <string name="onboarding_contact_share_fallback">Compartir la invitación yo mismo</string>
+    <string name="onboarding_contact_disclaimer">No es un servicio de emergencia y no sustituye al 911/112.</string>
     <!-- Errores por Problem.code (contrato v0.5.0): copy humano del brief,
          nunca el detail crudo. -->
     <string name="onboarding_error_phone_invalid">Ese teléfono no parece completo. Revísalo.</string>

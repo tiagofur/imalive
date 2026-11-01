@@ -122,6 +122,20 @@ class SessionStoreTest {
         }
 
     @Test
+    fun `completeOnboarding round-trips and clear resets the flag`() =
+        runBlocking {
+            val testStore = newStore()
+
+            assertEquals(false, testStore.store.onboardingComplete.first())
+
+            testStore.store.completeOnboarding()
+            assertEquals(true, testStore.store.onboardingComplete.first())
+
+            testStore.store.clear()
+            assertEquals(false, testStore.store.onboardingComplete.first())
+        }
+
+    @Test
     fun `an empty store reads as no session`() =
         runBlocking {
             val testStore = newStore()

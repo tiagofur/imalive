@@ -1,6 +1,9 @@
 package com.imalive.tranqui.feature.onboarding
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -53,7 +56,38 @@ fun OnboardingScreen(
                 )
 
             // Slice 4 lands the ritual and the "añade a tu mamá" moment.
-            OnboardingStep.RITUAL, OnboardingStep.CONTACT -> Unit
+            OnboardingStep.RITUAL -> {
+                // The system prompt fires only from the card's allow action
+                // (just-in-time, API 33+); the answer — granted or not — is
+                // final for this flow and the card never re-asks.
+                val permissionLauncher =
+                    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+                        viewModel.onNotificationsAnswered()
+                    }
+                CheckinTimeScreen(
+                    uiState = uiState,
+                    onNameChanged = viewModel::onNameChanged,
+                    onCheckinTimeChanged = viewModel::onCheckinTimeChanged,
+                    onContinueClicked = viewModel::onRitualContinueClicked,
+                    onAllowNotifications = {
+                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    },
+                    onPermissionAnswered = viewModel::onNotificationsAnswered,
+                    showPermissionCard =
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !uiState.permissionAnswered,
+                )
+            }
+
+            OnboardingStep.CONTACT ->
+                AddContactScreen(
+                    uiState = uiState,
+                    onContactNameChanged = viewModel::onContactNameChanged,
+                    onContactPhoneChanged = viewModel::onContactPhoneChanged,
+                    onSendInviteClicked = viewModel::onSendInviteClicked,
+                    onInviteAnotherClicked = viewModel::onInviteAnotherClicked,
+                    onFinishClicked = viewModel::onFinishClicked,
+                )
         }
     }
 }

@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Location is never requested (producto.md §H). POST_NOTIFICATIONS
-         arrives with the onboarding pre-permission card (issue #75, slice 4). -->
+    <!-- Location is never requested (producto.md §H). POST_NOTIFICATIONS is
+         only prompted from the onboarding pre-permission card (issue #75,
+         slice 4): just-in-time, never in the cold. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- The manual WhatsApp invitation fallback (slice 4) needs package
+         visibility on API 30+; the contact picker needs nothing. -->
+    <queries>
+        <package android:name="com.whatsapp" />
+    </queries>
 
     <application
         android:name=".TranquiApplication"
