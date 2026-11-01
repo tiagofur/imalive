@@ -44,3 +44,36 @@
 "onboarding.error_rate_limited" = "Demasiados intentos. Prueba otra vez en %d s.";
 "onboarding.error_offline" = "No tienes internet. Revisa tu conexión y prueba otra vez.";
 "onboarding.error_retry" = "Algo no salió. Inténtalo de nuevo.";
+
+/* Paso 3, el ritual (brief): el nombre con el que te llamará tu gente y la
+   hora del recordatorio. */
+"onboarding.ritual_title" = "¿Cómo te llamas?";
+"onboarding.ritual_name_label" = "Tu nombre";
+"onboarding.ritual_name_error" = "Escríbenos tu nombre: así te llamará tu gente.";
+"onboarding.ritual_time_title" = "¿A qué hora te recordamos cada día?";
+"onboarding.ritual_time_sub" = "Te sugerimos las 21:00: una hora tranquila para avisar que el día cerró bien. Elige la tuya.";
+"onboarding.ritual_time_label" = "Tu hora de check-in";
+"onboarding.ritual_time_a11y" = "Elegir la hora del recordatorio. Actualmente %@.";
+"onboarding.ritual_cta" = "Continuar";
+"onboarding.busy_saving_ritual" = "Guardando tu ritual…";
+
+/* Paso 4, el momento memorable (brief): la burbuja espejo del mensaje REAL
+   que recibirá tu persona de confianza (welcomeMessageV1 del backend). */
+"onboarding.contact_title" = "¿Quién te pregunta si llegaste bien?";
+"onboarding.contact_sub" = "Invita a esa persona de confianza. Le llega hoy un mensaje como este:";
+"onboarding.contact_welcome_message" = "%1$@: %2$@ te ha añadido como persona de confianza en %3$@, la app con la que confirma a diario que está bien. No tienes que hacer nada. Solo te escribiremos si %2$@ pasa muchas horas sin confirmar, para que puedas comprobar cómo está. %3$@ es un servicio de avisos entre personas; no es un servicio de emergencias.";
+"onboarding.contact_preview_you" = "[tu nombre]";
+"onboarding.contact_preview_them" = "[su nombre]";
+"onboarding.contact_name_label" = "Su nombre";
+"onboarding.contact_phone_label" = "Su teléfono";
+"onboarding.contact_phone_hint" = "+52 55 1234 5678";
+"onboarding.contact_cta" = "Enviar invitación por WhatsApp";
+"onboarding.contact_skip" = "Lo haré después";
+"onboarding.contact_limit" = "Por ahora tu plan guarda 1 contacto. Añade más cuando quieras desde Tu círculo.";
+"onboarding.contact_saved" = "Listo. %@ ya sabe que desde hoy cuentas con ella.";
+"onboarding.contact_finish" = "Ir al inicio";
+"onboarding.contact_share_fallback" = "Compartir la invitación yo mismo";
+"onboarding.busy_saving_contact" = "Enviando tu invitación…";
+
+/* La llegada (brief): una racha en cero es un comienzo, nunca una deuda. */
+"home.streak_zero" = "Tu racha empieza hoy.";

@@ -19,7 +19,10 @@ struct TranquiApp: App {
             sessions: sessions
         ))
         _onboarding = State(initialValue: OnboardingModel(
-            auth: NetworkAuthRepository(api: api, sessions: sessions)
+            auth: NetworkAuthRepository(api: api, sessions: sessions),
+            profiles: NetworkProfileRepository(api: api),
+            contacts: NetworkContactsRepository(api: api),
+            sessions: sessions
         ))
     }
 
@@ -35,8 +38,8 @@ struct TranquiApp: App {
     /// `-tranqui-session-stub signed-in|signed-out` boots the gate over an
     /// ephemeral store (seeded with a canned session, or empty) without
     /// touching the Keychain — test tokens are not real sessions. The full
-    /// stubbed API mode lands with the onboarding flow (slice 4); with
-    /// only this override the home shows its defaults when the profile read
+    /// stubbed API mode (`-tranqui-stub-api`) joins in slice 4; with only
+    /// this override the home shows its defaults when the profile read
     /// cannot reach the network, which is exactly the resilience it must have.
     private static func sessionPersisting() -> any SessionPersisting {
         let arguments = ProcessInfo.processInfo.arguments
@@ -50,26 +53,10 @@ struct TranquiApp: App {
                 refreshToken: "smoke-refresh-token",
                 expiresAt: Date().addingTimeInterval(900)
             ))
+            // The smoke user is past the onboarding (slice 4: the gate needs
+            // session AND the finished flag to land home).
+            persisting.setOnboardingComplete(true)
         }
         return persisting
-    }
-}
-
-/// In-memory persistence for the smoke mode only: process-local, nothing
-/// reaches the Keychain.
-private final class EphemeralSessionPersisting: SessionPersisting, @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored: StoredSession?
-
-    func load() -> StoredSession? {
-        lock.withLock { stored }
-    }
-
-    func save(_ session: StoredSession) {
-        lock.withLock { stored = session }
-    }
-
-    func clear() {
-        lock.withLock { stored = nil }
     }
 }

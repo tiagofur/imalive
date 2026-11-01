@@ -25,6 +25,7 @@ struct SessionStoreTests {
 
     @Test func restoresThePersistedSessionAndLandsReady() {
         let persisted = InMemoryPersisting(initial: Self.storedSession())
+        persisted.setOnboardingComplete(true) // a user on home finished the flow
 
         let store = SessionStore(persisting: persisted)
 
@@ -38,6 +39,7 @@ struct SessionStoreTests {
         let store = SessionStore(persisting: persisting)
 
         store.save(Self.storedSession(accessToken: "verified"))
+        store.completeOnboarding()
 
         #expect(store.gate == .ready)
         #expect(store.session?.accessToken == "verified")
@@ -55,5 +57,51 @@ struct SessionStoreTests {
         #expect(store.session == nil)
         #expect(store.cachedSession() == nil)
         #expect(persisting.load() == nil)
+    }
+
+    // MARK: the onboarding-finished flag (issue #76 slice 4)
+
+    @Test func aSessionAloneKeepsTheOnboardingGateUntilTheFlowFinishes() {
+        let store = SessionStore(persisting: InMemoryPersisting())
+
+        store.save(Self.storedSession()) // what the OTP verify persists
+
+        #expect(store.gate == .needsOnboarding)
+        #expect(store.onboardingComplete == false)
+    }
+
+    @Test func completingTheOnboardingOpensTheReadyGateAndSurvivesARestart() {
+        let persisting = InMemoryPersisting()
+        let store = SessionStore(persisting: persisting)
+        store.save(Self.storedSession())
+
+        store.completeOnboarding()
+
+        #expect(store.gate == .ready)
+        #expect(store.onboardingComplete == true)
+        #expect(persisting.isOnboardingComplete() == true)
+
+        // The flag is persisted: a relaunch lands home directly.
+        let relaunched = SessionStore(persisting: persisting)
+        #expect(relaunched.gate == .ready)
+    }
+
+    @Test func completingTheOnboardingWithoutASessionNeverOpensHome() {
+        let store = SessionStore(persisting: InMemoryPersisting())
+
+        store.completeOnboarding()
+
+        #expect(store.gate == .needsOnboarding)
+    }
+
+    @Test func clearResetsTheOnboardingFlagSoARejectingRefreshWalksBack() {
+        let store = SessionStore(persisting: InMemoryPersisting())
+        store.save(Self.storedSession())
+        store.completeOnboarding()
+
+        store.clear() // the rejected-refresh path
+
+        #expect(store.gate == .needsOnboarding)
+        #expect(store.onboardingComplete == false)
     }
 }

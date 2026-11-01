@@ -13,11 +13,27 @@ struct OnboardingScreen: View {
 
     var body: some View {
         NavigationStack(path: pathBinding) {
-            stepView(step: .welcome) {
-                WelcomeView(onStart: model.startTapped)
-            }
-            .navigationDestination(for: OnboardingStep.self) { step in
-                destinationView(for: step)
+            // The ritual and the contact moment are flat steps (the machine
+            // forbids backing out mid-ritual): they render as the root when
+            // the step is theirs, stacked steps for the auth phases.
+            Group {
+                switch model.state.step {
+                case .ritual:
+                    stepView(step: .ritual) {
+                        CheckinTimeView(model: model)
+                    }
+                case .contact:
+                    stepView(step: .contact) {
+                        AddContactView(model: model)
+                    }
+                default:
+                    stepView(step: .welcome) {
+                        WelcomeView(onStart: model.startTapped)
+                    }
+                    .navigationDestination(for: OnboardingStep.self) { step in
+                        destinationView(for: step)
+                    }
+                }
             }
         }
     }
@@ -42,6 +58,8 @@ struct OnboardingScreen: View {
             stepView(step: step) {
                 OtpCodeView(model: model)
             }
+        case .ritual, .contact:
+            EmptyView() // flat steps; they own the root when the step is theirs
         }
     }
 
@@ -59,12 +77,14 @@ struct OnboardingScreen: View {
 
 private extension OnboardingStep {
     /// Welcome is segment 1; the two OTP phases share segment 2 (brief: 4
-    /// visible steps; phone and code are step 2). The ritual and the
-    /// contact moment join in slice 4.
+    /// visible steps; phone and code are step 2); the ritual is 3 and the
+    /// contact moment is 4 (slice 4).
     var progressSegment: Int {
         switch self {
         case .welcome: 1
         case .phone, .code: 2
+        case .ritual: 3
+        case .contact: 4
         }
     }
 }
@@ -85,5 +105,20 @@ private extension OnboardingStep {
         step: .code,
         phone: "+52 55 1234 5678",
         code: "48291"
+    )))
+}
+
+#Preview("Ritual") {
+    OnboardingScreen(model: OnboardingModel(previewState: OnboardingUiState(
+        step: .ritual,
+        name: "Ana"
+    )))
+}
+
+#Preview("El momento") {
+    OnboardingScreen(model: OnboardingModel(previewState: OnboardingUiState(
+        step: .contact,
+        name: "Ana",
+        contactName: "Mamá"
     )))
 }

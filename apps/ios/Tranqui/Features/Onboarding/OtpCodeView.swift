@@ -70,6 +70,10 @@ struct OtpCodeView: View {
         switch busy {
         case .sendingCode: String(localized: "onboarding.busy_sending_code")
         case .verifying: String(localized: "onboarding.busy_verifying")
+        case .savingRitual, .savingContact:
+            // The OTP screen never shows the ritual's busy states; they
+            // exist in the same enum, so the switch must know them.
+            String(localized: "onboarding.busy_sending_code")
         }
     }
 

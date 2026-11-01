@@ -1,64 +1,6 @@
 import Foundation
 import Observation
 
-/// The linear steps of the onboarding (plan issue #76): no custom
-/// navigation — the machine owns the step (the NavigationStack path mirrors
-/// it, so the system back walks it backwards) and the phone/code drafts
-/// survive because they live here. Slice 3 lands the auth steps; the ritual
-/// and the contact moment join in slice 4. The verify persists the session
-/// and the reactive gate (slice 2) lands home — leaving the flow is never a
-/// step of the machine.
-enum OnboardingStep: Equatable, Hashable, Sendable {
-    case welcome
-    case phone
-    case code
-}
-
-/// Which long operation is running: the copy differs per phase (brief paso
-/// 2: "Enviando tu código…" / "Verificando…").
-enum OnboardingBusy: Equatable, Sendable {
-    case sendingCode
-    case verifying
-}
-
-enum PhoneError: Equatable, Sendable {
-    /// The E.164 check (local or the server's PHONE_INVALID) failed.
-    case invalid
-
-    /// No network: the draft stays, the user retries.
-    case offline
-
-    /// An unexpected business answer: human copy, never the raw detail.
-    case retry
-}
-
-enum CodeError: Equatable, Sendable {
-    /// OTP_INVALID: the written code stays for rewrite (brief paso 2).
-    case invalid
-
-    /// OTP_EXPIRED: a fresh code went out automatically (the auto-reenvío).
-    case expired
-
-    case offline
-    case retry
-}
-
-/// The one screen-state the onboarding renders. The model writes it, the
-/// views read it; nothing mutates it behind the machine's intents.
-struct OnboardingUiState: Equatable, Sendable {
-    var step: OnboardingStep = .welcome
-    var phone = ""
-    var code = ""
-    var busy: OnboardingBusy?
-    var phoneError: PhoneError?
-    var codeError: CodeError?
-
-    /// Live resend countdown in seconds: > 0 disables "Enviarlo de nuevo"
-    /// and shows the rate-limit copy with the seconds (brief paso 2). Fed
-    /// by the Retry-After header.
-    var rateLimitSeconds = 0
-}
-
 /// The onboarding step machine (plan issue #76, the iOS mirror of Android's
 /// OnboardingViewModel): every user intent is a small named function, and
 /// the contract's stable Problem.codes map to human states — the raw detail
@@ -66,9 +8,15 @@ struct OnboardingUiState: Equatable, Sendable {
 @MainActor
 @Observable
 final class OnboardingModel {
-    private(set) var state = OnboardingUiState()
+    /// Internal-set on purpose: the ritual extension (same module) writes it.
+    internal(set) var state = OnboardingUiState()
 
     private let auth: any AuthRepository
+    // The ritual extension (OnboardingRitual.swift, same module) writes the
+    // state and reads these: internal on purpose, views never see them.
+    let profiles: any ProfileRepository
+    let contacts: any ContactsRepository
+    let sessions: SessionStore
     private var cooldownTask: Task<Void, Never>?
 
     /// The cooldown tick: 1 s in production. The tests inject a long tick to
@@ -76,8 +24,21 @@ final class OnboardingModel {
     /// drain — the same trick as Android's virtual test dispatcher.
     var cooldownTick: Duration = .seconds(1)
 
-    init(auth: any AuthRepository) {
+    init(
+        auth: any AuthRepository,
+        profiles: any ProfileRepository,
+        contacts: any ContactsRepository,
+        sessions: SessionStore
+    ) {
         self.auth = auth
+        self.profiles = profiles
+        self.contacts = contacts
+        self.sessions = sessions
+        // A process death mid-onboarding (the OTP verify already saved the
+        // session) resumes at the ritual: the auth phases are done.
+        if sessions.session != nil {
+            state.step = .ritual
+        }
     }
 
     // MARK: - Intents
@@ -139,16 +100,23 @@ final class OnboardingModel {
             state.step = .phone
         case .code:
             break
+        case .ritual:
+            state.step = .ritual
+        case .contact:
+            state.step = .contact
         }
     }
 
     /// The path the NavigationStack renders for the current step (welcome is
-    /// the root; phone and code stack on top of it).
+    /// the root; phone and code stack on top of it). The ritual and contact
+    /// steps are flat (the system back is disabled there on purpose: leaving
+    /// mid-ritual with a saved session would strand a half-open account).
     func navigationPath() -> [OnboardingStep] {
         switch state.step {
         case .welcome: []
         case .phone: [.phone]
         case .code: [.phone, .code]
+        case .ritual, .contact: []
         }
     }
 
@@ -191,11 +159,12 @@ final class OnboardingModel {
         Task {
             do {
                 try await auth.verifyOtp(phone: phone, code: code)
-                // The repo persisted the session: the reactive gate lands
-                // home with no navigation call. The machine resets, so a
-                // session wiped later (a rejected refresh) reopens the flow
-                // fresh instead of mid-code.
+                // The repo persisted the session: the flow continues at the
+                // ritual (slice 4 — a session alone is not home). The reset
+                // keeps a session wiped later (a rejected refresh) reopening
+                // the flow fresh instead of mid-code.
                 state = OnboardingUiState()
+                state.step = .ritual
             } catch let error as ApiError {
                 handle(error, fallback: {
                     state.busy = nil
@@ -259,18 +228,35 @@ final class OnboardingModel {
 
     private static let codeLength = 6
     private static let defaultCooldownSeconds = 60
-    private static let digits = "0123456789"
+    static let digits = "0123456789"
+    static let maxNameLength = 80
 
     /// E.164: + followed by 8–15 digits, country code not starting 0.
-    private static let e164 = /^\+[1-9]\d{7,14}$/
+    static let e164 = /^\+[1-9]\d{7,14}$/
+
+    /// Minutes-from-midnight → the contract's HH:MM (24h).
+    static func hhmm(_ minutes: Int) -> String {
+        String(format: "%02d:%02d", minutes / 60, minutes % 60)
+    }
 }
 
 #if DEBUG
     extension OnboardingModel {
-        /// Previews only: a model frozen at a given state (the preview auth seam
-        /// answers nothing).
+        /// Previews and tests only: jumps the machine to a step without the
+        /// wire (the ritual suites exercise contact flows directly).
+        func jumpTo(_ step: OnboardingStep) {
+            state.step = step
+        }
+
+        /// Previews only: a model frozen at a given state (the preview seams
+        /// answer nothing).
         convenience init(previewState: OnboardingUiState) {
-            self.init(auth: PreviewAuthRepository())
+            self.init(
+                auth: PreviewAuthRepository(),
+                profiles: PreviewSupport.profiles,
+                contacts: PreviewSupport.contacts,
+                sessions: PreviewSupport.sessions
+            )
             state = previewState
         }
     }

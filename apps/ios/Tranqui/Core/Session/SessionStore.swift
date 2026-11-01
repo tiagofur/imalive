@@ -7,10 +7,12 @@ enum HomeGate: Equatable, Sendable {
     /// The store has not answered yet.
     case loading
 
-    /// No session: the onboarding flow owns the screen.
+    /// No session, or the session exists but the onboarding has not
+    /// finished (slice 4): the onboarding flow owns the screen.
     case needsOnboarding
 
-    /// Session present: home, with the real streak.
+    /// Session present and the onboarding finished: home, with the real
+    /// streak.
     case ready
 }
 
@@ -28,12 +30,14 @@ protocol SessionStoring: Sendable {
 /// switches on. A session wiped by the refresher (a rejected refresh) walks
 /// the user back to onboarding without manual navigation.
 ///
-/// The gate keys on session presence for now; the onboarding-finished flag
-/// joins with the onboarding flow itself (slices 3-4), as on Android.
+/// The gate needs session AND the finished-onboarding flag (slice 4, as on
+/// Android): the OTP verify persists the session and the flow continues —
+/// only the ritual and the trusted contact (or the honest skip) open home.
 @MainActor
 @Observable
 final class SessionStore: SessionStoring {
     private(set) var session: StoredSession?
+    private(set) var onboardingComplete = false
     private(set) var gate: HomeGate = .loading
 
     private let persisting: any SessionPersisting
@@ -44,21 +48,33 @@ final class SessionStore: SessionStoring {
         self.persisting = persisting
         let restored = persisting.load()
         session = restored
-        gate = Self.gate(for: restored)
+        onboardingComplete = persisting.isOnboardingComplete()
+        gate = Self.gate(session: restored, onboardingComplete: onboardingComplete)
     }
 
     func save(_ newSession: StoredSession) {
         persisting.save(newSession)
         session = newSession
-        gate = Self.gate(for: newSession)
+        gate = Self.gate(session: newSession, onboardingComplete: onboardingComplete)
     }
 
-    /// Wipes the Keychain and the cache: used on logout and on a rejected
-    /// refresh (the refresher calls this through the `SessionStoring` seam).
+    /// Marks the onboarding as finished; the gate then lets the user into
+    /// home (issue #76 slice 4). The flow calls it on the final step — the
+    /// trusted contact sent, the free-plan copy or the honest skip.
+    func completeOnboarding() {
+        persisting.setOnboardingComplete(true)
+        onboardingComplete = true
+        gate = Self.gate(session: session, onboardingComplete: true)
+    }
+
+    /// Wipes the Keychain (and the flag with it) and the cache: used on
+    /// logout and on a rejected refresh (the refresher calls this through
+    /// the `SessionStoring` seam).
     func clear() {
         persisting.clear()
         session = nil
-        gate = Self.gate(for: nil)
+        onboardingComplete = false
+        gate = Self.gate(session: nil, onboardingComplete: false)
     }
 
     // MARK: SessionStoring — called from the network actors. A token
@@ -69,7 +85,7 @@ final class SessionStore: SessionStoring {
         session
     }
 
-    private static func gate(for session: StoredSession?) -> HomeGate {
-        session == nil ? .needsOnboarding : .ready
+    private static func gate(session: StoredSession?, onboardingComplete: Bool) -> HomeGate {
+        session != nil && onboardingComplete ? .ready : .needsOnboarding
     }
 }

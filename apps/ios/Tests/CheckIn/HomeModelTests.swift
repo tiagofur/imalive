@@ -63,7 +63,11 @@ struct HomeModelTests {
     }
 
     private func signedInStore() -> SessionStore {
-        SessionStore(persisting: InMemoryPersisting(initial: session()))
+        // A user on home has a session AND a finished onboarding (slice 4:
+        // the gate requires both).
+        let store = SessionStore(persisting: InMemoryPersisting(initial: session()))
+        store.completeOnboarding()
+        return store
     }
 
     @Test func stateStartsPendingAtNineToday() {
@@ -102,9 +106,14 @@ struct HomeModelTests {
         let model = HomeModel(profiles: FixedRepo(profile: profile(streakDays: 5)), sessions: store)
         #expect(model.gate == .needsOnboarding)
 
+        // The OTP verify saves the session: the flow continues at the
+        // ritual (slice 4) — a session alone no longer lands home.
         store.save(session())
         model.reactToSession()
+        #expect(model.gate == .needsOnboarding)
 
+        store.completeOnboarding()
+        model.reactToSession()
         #expect(model.gate == .ready)
         await model.loadStreak()
         #expect(model.streakDays == 5)
@@ -118,6 +127,11 @@ struct HomeModelTests {
         store.save(session())
         // The reaction re-arms itself on every fire; a short sleep lets the
         // @MainActor task run (there is no deterministic drain API).
+        try await Task.sleep(for: .milliseconds(100))
+        // A session alone is the ritual, not home (slice 4).
+        #expect(model.gate == .needsOnboarding)
+
+        store.completeOnboarding()
         try await Task.sleep(for: .milliseconds(100))
         #expect(model.gate == .ready)
 
