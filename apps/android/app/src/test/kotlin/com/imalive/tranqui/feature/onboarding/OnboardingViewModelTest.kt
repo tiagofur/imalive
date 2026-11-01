@@ -18,6 +18,43 @@ import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 
+// Shared by the onboarding test files of this package: an in-memory auth
+// repository the tests program with errors and counters (the wire behavior
+// is covered by NetworkRepositoriesTest).
+internal class FakeAuth : AuthRepository {
+    var requestCalls = 0
+        private set
+
+    var verifyCalls = 0
+        private set
+
+    var lastVerifyPhone: String? = null
+        private set
+
+    var lastVerifyCode: String? = null
+        private set
+
+    var requestError: Exception? = null
+    var verifyError: Exception? = null
+    var gateRequest: CompletableDeferred<Unit>? = null
+
+    override suspend fun requestOtp(phone: String) {
+        requestCalls++
+        gateRequest?.await()
+        requestError?.let { throw it }
+    }
+
+    override suspend fun verifyOtp(
+        phone: String,
+        code: String,
+    ) {
+        verifyCalls++
+        lastVerifyPhone = phone
+        lastVerifyCode = code
+        verifyError?.let { throw it }
+    }
+}
+
 // Criteria of issue #75 slice 3: the onboarding is a linear step machine on
 // one VM — steps advance and go back with drafts intact, the errors of the
 // contract map to human states (never the raw detail) and the resend
@@ -34,40 +71,6 @@ class OnboardingViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-    }
-
-    private class FakeAuth : AuthRepository {
-        var requestCalls = 0
-            private set
-
-        var verifyCalls = 0
-            private set
-
-        var lastVerifyPhone: String? = null
-            private set
-
-        var lastVerifyCode: String? = null
-            private set
-
-        var requestError: Exception? = null
-        var verifyError: Exception? = null
-        var gateRequest: CompletableDeferred<Unit>? = null
-
-        override suspend fun requestOtp(phone: String) {
-            requestCalls++
-            gateRequest?.await()
-            requestError?.let { throw it }
-        }
-
-        override suspend fun verifyOtp(
-            phone: String,
-            code: String,
-        ) {
-            verifyCalls++
-            lastVerifyPhone = phone
-            lastVerifyCode = code
-            verifyError?.let { throw it }
-        }
     }
 
     // Drives the machine to the code phase the way the UI does.
