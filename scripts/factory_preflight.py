@@ -18,6 +18,8 @@ REQUIRED_FILES = [
     "AGENTS.md",
     "README.md",
     "docs/README.md",
+    "docs/procesos/CHECKPOINTS.md",
+    ".atl/skill-registry.md",
     "docs/agentes/fabrica-software.md",
     "docs/procesos/flujo-desarrollo.md",
     ".agents/skills/triage/SKILL.md",
