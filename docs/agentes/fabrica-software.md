@@ -23,7 +23,7 @@ El desarrollo es realizado por agentes autónomos supervisados por el fundador. 
 ## Ciclo de trabajo de un agente (cada sesión)
 
 1. **Orientarse**: leer `AGENTS.md`, este documento y el [roadmap](../producto/roadmap.md) (fase activa).
-2. **Tomar trabajo**: ejecutar la **ronda de fábrica** ([flujo-desarrollo §Ronda](../procesos/flujo-desarrollo.md)): triage → arquitectura (plan para size m+) → implementación del mejor issue `status:ready` → revisión de PRs abiertos → cierre.
+2. **Tomar trabajo**: ejecutar la **ronda de fábrica** ([flujo-desarrollo §Ronda](../procesos/flujo-desarrollo.md)): triage → arquitectura (plan para size m+) → implementación del mejor issue `status:ready` → revisión de PRs abiertos → cierre. La verificación de cada paso vive en [CHECKPOINTS](../procesos/CHECKPOINTS.md); el registro de skills, en [.atl/skill-registry.md](../../.atl/skill-registry.md).
 3. **Antes de implementar**: leer el estándar de la capa que toca (`stack/backend-go.md`, `stack/android.md`, `stack/ios.md`, `api/api-guidelines.md`, `diseno/*`) y, si el issue toca check-in/escalada/notificaciones, **obligatoriamente** [arquitectura/motor-escalada.md](../arquitectura/motor-escalada.md).
 4. **Implementar** por work units (comportamiento + tests + docs en el mismo commit).
 5. **Verificar** con los comandos por stack (abajo) y registrar el resultado exacto en el PR.
@@ -52,12 +52,37 @@ El desarrollo es realizado por agentes autónomos supervisados por el fundador. 
 5. Secretos nunca en repo; credenciales reales nunca en tests (solo sandbox).
 6. `main` solo recibe merges de PR con CI verde; nadie pushea a `main`.
 
+## Topología de ejecución: Inline vs Delegada (P2, issue #28)
+
+Cada entrega elige una de las dos topologías; el plan del architect la
+declara en su `delivery_strategy` y el PR la lleva en su línea `Delivery:`.
+
+| | **Inline** | **Delegada** |
+|---|---|---|
+| Quién | el orquestador de la sesión implementa él mismo | los agentes de rol (`.zcode/agents/`) por despacho |
+| Cuándo | el proveedor bloquea despachos, el slice es pequeño o de wiring fino | la ventana de cooperación lo permite y el issue es `size:m`+ |
+| La disciplina | idéntica: work-unit commits, CHECKPOINTS, metadata completa | idéntica: el agente corre bajo el mismo protocolo |
+| El registro | el issue + los commits son el documento durable (sin archivos extra) | `odd/tasks/<issue>-<slice>.md` como memoria de trabajo del slice |
+
+**odd/tasks** (convención, no maquinaria): cuando el trabajo es delegado y
+multi-slice, el implementer deja en `odd/tasks/<issue>-<slice>.md` el
+estado del slice (qué quedó, qué falta, decisiones tomadas sin preguntar).
+Es memoria de trabajo, no un entregable: al mergear la cadena, los archivos
+se eliminan — el issue de GitHub sigue siendo el documento durable. Sin
+odd/tasks para trabajo inline ni para slices de un solo PR.
+
+**Cuota del proveedor**: los despachos fallan a ratos ("unusual activity",
+límite de concurrencia 2, cuota de 5 h). El patrón operado: reintentos con
+cooldown; si el corte llega a mitad de slice, el agente deja su trabajo en
+la rama y el orquestador lo retoma en Inline sin perder disciplina.
+
 ## Guardarraíles ejecutables (solo lectura salvo indicación)
 
 | Script | Uso |
 |---|---|
 | `python3 scripts/factory_preflight.py` | Arranque de sesión: verifica archivos de la fábrica y estado de git. No corre tests ni autoriza escrituras. `--require-clean` antes de entregar. |
 | `python3 scripts/factory_handoff.py --base origin/main --head <sha> --issue <N>` | Paquete de revisión con contexto limpio: SHAs fijados, digest, diff y triggers de revisión dual. Única entrada del revisor. |
+| `python3 scripts/check_pr_metadata.py --body-file <file> [--strict]` | Valida la metadata del PR: `Delivery:`/`Risk:` con valores válidos, encabezados obligatorios, checklist de fábrica. |
 | `scripts/setup-labels.sh` | Taxonomía de labels (incluye `contract-break`, `judgment-day`, `size:exception`). |
 | `python3 -m unittest discover -s tests` | Tests de los guardarraíles. |
 
