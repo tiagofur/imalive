@@ -19,7 +19,6 @@ dist/
 .vscode/
 
 # Herramientas locales de la fábrica
-.atl/
 
 # Impeccable: artefactos locales de diseño (mocks, capturas, decisiones).
 # Solo se versiona la config de equipo; la config local nunca.
@@ -27,3 +26,7 @@ dist/
 !.impeccable/config.json
 .sandbox-outbox*
 backend/.sandbox-outbox*
+
+# .atl holds the factory's skill registry (tracked deliberately, issue #28)
+!.atl/
+!.atl/skill-registry.md
