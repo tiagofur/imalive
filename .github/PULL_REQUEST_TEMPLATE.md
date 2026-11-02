@@ -1,3 +1,6 @@
+Delivery: single-pr
+Risk: baja
+
 ## Issue
 
 Closes #
