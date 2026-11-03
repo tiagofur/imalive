@@ -60,6 +60,18 @@ enum DesignTokens {
 
     /// The hero CTA height (the OkButton DNA; targets ≥ 44 pt).
     static let heroHeight: CGFloat = 56
+
+    /// True on iOS 26+ (the Liquid Glass design language): the system owns
+    /// bar chrome and the explicit glass APIs (`glassEffect`, the `.glass`
+    /// button styles) exist. The deployment target is iOS 17, so the
+    /// designed legacy look stays first-class behind this gate — the only
+    /// `#available(iOS 26` the app code carries (docs/stack/ios.md).
+    static var isLiquidGlass: Bool {
+        if #available(iOS 26.0, *) {
+            return true
+        }
+        return false
+    }
 }
 
 extension Bundle {

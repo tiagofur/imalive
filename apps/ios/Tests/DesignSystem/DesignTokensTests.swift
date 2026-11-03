@@ -14,4 +14,11 @@ struct DesignTokensTests {
 
         #expect(light != dark, "token \(name) must resolve a distinct dark variant")
     }
+
+    @Test func isLiquidGlassTracksTheOS() {
+        // The gate mirrors the runtime: true from iOS 26 (the Liquid Glass
+        // design language), false on the supported legacy OSes.
+        let major = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        #expect(DesignTokens.isLiquidGlass == (major >= 26))
+    }
 }
