@@ -71,7 +71,21 @@ struct OnboardingScreen: View {
             content()
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .stepBarChrome()
+    }
+}
+
+private extension View {
+    /// iOS 26+ owns the bar (Liquid Glass, scroll edge effect when a step
+    /// scrolls under it); the hidden background is the pre-26 look the
+    /// brief was verified against (issue #94).
+    @ViewBuilder
+    func stepBarChrome() -> some View {
+        if DesignTokens.isLiquidGlass {
+            self
+        } else {
+            toolbarBackground(.hidden, for: .navigationBar)
+        }
     }
 }
 
