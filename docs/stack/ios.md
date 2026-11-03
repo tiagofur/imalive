@@ -1,6 +1,6 @@
 # Estándares de iOS
 
-> Última actualización: 2026-11-01. ADR-0002 (nativo). Stack autorizado en [stack.md](stack.md).
+> Última actualización: 2026-11-03. ADR-0002 (nativo). Stack autorizado en [stack.md](stack.md).
 
 ## Versiones (fijadas en el scaffolding F0)
 
@@ -28,6 +28,15 @@
   /Tests         # Swift Testing
   /UITests       # XCUITest humo
 ```
+
+## Liquid Glass (iOS 26+) y el legado iOS 17–25
+
+Con deployment target iOS 17 y SDK 26+, el lenguaje de diseño Liquid Glass convive con el look legacy. Reglas de adopción (issue #94):
+
+- **La chrome de barras es del sistema en iOS 26+**: nunca un override global de `toolbarBackground(.hidden)` que la suprima; si una pantalla legacy lo necesita, va tras el gate `DesignTokens.isLiquidGlass` (el **único** `#available(iOS 26` permitido en código de app; anclado a la versión del SO por test).
+- **El vidrio es de la capa de navegación/controles** (barras, controles flotantes), nunca de contenido: las tarjetas de contenido siguen sólidas/opacas (p. ej. `MessagePreviewCard`).
+- **El CTA protagonista conserva tinte sólido** (`.borderedProminent`); los estilos `.glass` son para controles flotantes secundarios, no para el hero.
+- Las APIs explícitas de vidrio (`glassEffect`, `GlassEffectContainer`, `glassEffectID`) solo cuando exista el primer elemento flotante que las justifique, siempre tras el gate y con `GlassEffectContainer` si se morfean.
 
 ## Arquitectura
 
